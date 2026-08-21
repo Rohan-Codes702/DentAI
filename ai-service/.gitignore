@@ -1,0 +1,84 @@
+# -------------------------
+# Environment
+# -------------------------
+.env
+.env.*
+venv/
+.venv/
+
+# -------------------------
+# ML Models / Weights
+# -------------------------
+*.pt
+*.pth
+*.h5
+*.pkl
+*.ckpt
+*.onnx
+
+# -------------------------
+# Datasets
+# -------------------------
+data/
+dataset/
+datasets/
+*.csv
+*.npy
+*.zip
+
+
+# -------------------------
+# Training Outputs
+# -------------------------
+runs/
+outputs/
+logs/
+
+# -------------------------
+# Python Cache
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+
+# -------------------------
+# Jupyter
+# -------------------------
+.ipynb_checkpoints/
+
+# -------------------------
+# OS Files
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# IDE / Editor
+# -------------------------
+.vscode/
+.idea/
+
+# -------------------------
+# Build files
+# -------------------------
+dist/
+build/
+
+# -------------------------
+# Build files
+# -------------------------
+dist/
+build/
+
+# -------------------------
+# Gradio
+# -------------------------
+.gradio/
+
+# -------------------------
+# Generated Prediction Results
+# -------------------------
+app/static/results/*
+
+# Generated prediction results
+app/static/results/

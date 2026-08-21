@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "DentAI",
+    "slug": "dentai-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "DentAI needs your location to find nearby dental clinics.",
+        "NSLocationAlwaysUsageDescription": "DentAI needs your location to show nearby dental clinics.",
+        "NSCameraUsageDescription": "DentAI needs camera access to capture dental images.",
+        "NSPhotoLibraryUsageDescription": "DentAI needs photo library access to upload your profile picture.",
+        "NSPhotoLibraryAddUsageDescription": "DentAI needs photo library access to save dental reports."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      },
+      "package": "com.anonymous.dentaimobile",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow DentAI to use your location to find nearby dental clinics."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow DentAI to access your photos to upload a profile picture."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9e0f5df9-de43-4ba8-a5f8-4860ed9eb3e5"
+      }
+    }
+  }
+}
