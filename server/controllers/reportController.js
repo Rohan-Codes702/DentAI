@@ -55,7 +55,8 @@ const generateReport = async (req, res, next) => {
 
     await diagnosis.save();
 
-    const pdfBuffer = fs.readFileSync(pdfPath);
+    const patientPdfPath = await generateDiagnosisPDF(diagnosis);
+    const pdfBuffer = fs.readFileSync(patientPdfPath);
 
     sendEmail({
       to: diagnosis.patient.email,
@@ -77,6 +78,7 @@ const generateReport = async (req, res, next) => {
         logger.warn('Report email failed:', e.message)
       );
 
+    fs.unlink(patientPdfPath, () => {});
     fs.unlink(pdfPath, () => {});
 
     return res.status(200).json({
@@ -97,9 +99,9 @@ const generateReport = async (req, res, next) => {
 // @access  Private
 const getReport = async (req, res, next) => {
   try {
-    const diagnosis = await Diagnosis.findById(
-      req.params.diagnosisId
-    ).select('report patient dentist status');
+    const diagnosis = await Diagnosis.findById(req.params.diagnosisId)
+      .populate('patient', 'name email phone dateOfBirth gender address medicalProfile')
+      .populate('dentist', 'name email phone dentistProfile');
 
     if (!diagnosis) {
       return res.status(404).json({
@@ -109,8 +111,8 @@ const getReport = async (req, res, next) => {
     }
 
     const isOwner =
-      diagnosis.patient.equals(req.user._id) ||
-      diagnosis.dentist.equals(req.user._id);
+      diagnosis.patient._id.equals(req.user._id) ||
+      diagnosis.dentist._id.equals(req.user._id);
 
     if (!isOwner && req.user.role !== 'admin') {
       return res.status(403).json({
@@ -120,15 +122,24 @@ const getReport = async (req, res, next) => {
     }
 
     if (!diagnosis.report?.url) {
-      return res.status(404).json({
-        success: false,
-        message: 'Report not yet generated',
-      });
+      try {
+        const pdfPath = await generateDiagnosisPDF(diagnosis);
+        const uploaded = await uploadRawToCloudinary(pdfPath, 'dentai/reports');
+        diagnosis.report = {
+          url: uploaded.url,
+          publicId: uploaded.publicId,
+          generatedAt: new Date(),
+        };
+        await diagnosis.save();
+        fs.unlink(pdfPath, () => {});
+      } catch (e) {
+        logger.warn('Auto report upload warning:', e.message);
+      }
     }
 
     return res.status(200).json({
       success: true,
-      report: diagnosis.report,
+      report: diagnosis.report || { generatedAt: new Date() },
     });
   } catch (error) {
     next(error);
@@ -139,10 +150,11 @@ const getReport = async (req, res, next) => {
 // @route   GET /api/reports/:diagnosisId/pdf
 // @access  Private
 const downloadReport = async (req, res, next) => {
+  let pdfPath;
   try {
-    const diagnosis = await Diagnosis.findById(
-      req.params.diagnosisId
-    ).select('report patient dentist');
+    const diagnosis = await Diagnosis.findById(req.params.diagnosisId)
+      .populate('patient', 'name email phone dateOfBirth gender address medicalProfile')
+      .populate('dentist', 'name email phone dentistProfile');
 
     if (!diagnosis) {
       return res.status(404).json({
@@ -152,8 +164,8 @@ const downloadReport = async (req, res, next) => {
     }
 
     const isOwner =
-      diagnosis.patient.equals(req.user._id) ||
-      diagnosis.dentist.equals(req.user._id);
+      diagnosis.patient._id.equals(req.user._id) ||
+      diagnosis.dentist._id.equals(req.user._id);
 
     if (!isOwner && req.user.role !== 'admin') {
       return res.status(403).json({
@@ -162,58 +174,26 @@ const downloadReport = async (req, res, next) => {
       });
     }
 
-    if (!diagnosis.report?.url) {
-      return res.status(404).json({
-        success: false,
-        message: 'Report not yet generated',
-      });
-    }
+    // Generate fresh high-quality PDF dynamically
+    pdfPath = await generateDiagnosisPDF(diagnosis);
 
-    const pdfUrl = diagnosis.report.url;
-
-    console.log(
-      '[Report PDF] Fetching Cloudinary PDF:',
-      pdfUrl
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="dentai-diagnostic-report-${diagnosis._id}.pdf"`
     );
 
-    https.get(pdfUrl, (cloudinaryResponse) => {
-      if (cloudinaryResponse.statusCode !== 200) {
-        console.error(
-          '[Report PDF] Cloudinary response:',
-          cloudinaryResponse.statusCode
-        );
-
-        return res.status(502).json({
-          success: false,
-          message: 'Unable to retrieve PDF from storage',
-        });
-      }
-
-      res.setHeader(
-        'Content-Type',
-        'application/pdf'
-      );
-
-      res.setHeader(
-        'Content-Disposition',
-        'inline; filename="dentai-diagnostic-report.pdf"'
-      );
-
-      cloudinaryResponse.pipe(res);
-    }).on('error', (error) => {
-      console.error(
-        '[Report PDF] Cloudinary download error:',
-        error
-      );
-
-      if (!res.headersSent) {
-        res.status(502).json({
-          success: false,
-          message: 'Unable to retrieve PDF',
-        });
+    const stream = fs.createReadStream(pdfPath);
+    stream.pipe(res);
+    stream.on('end', () => {
+      if (pdfPath && fs.existsSync(pdfPath)) {
+        fs.unlink(pdfPath, () => {});
       }
     });
   } catch (error) {
+    if (pdfPath && fs.existsSync(pdfPath)) {
+      fs.unlink(pdfPath, () => {});
+    }
     next(error);
   }
 };

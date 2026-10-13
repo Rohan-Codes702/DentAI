@@ -42,6 +42,59 @@ const getStats = async (req, res, next) => {
   }
 };
 
+// @desc    Get logged-in dentist profile
+// @route   GET /api/dentists/profile
+// @access  Private (dentist)
+const getProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    res.status(200).json({ success: true, user: user.toSafeObject() });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update dentist profile
+// @route   PUT /api/dentists/profile
+// @access  Private (dentist)
+const updateProfile = async (req, res, next) => {
+  try {
+    const {
+      name,
+      phone,
+      specialization,
+      licenseNumber,
+      experienceYears,
+      clinicName,
+      clinicAddress,
+      bio,
+    } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+
+    user.dentistProfile = {
+      ...user.dentistProfile,
+      ...(specialization && { specialization }),
+      ...(licenseNumber && { licenseNumber }),
+      ...(experienceYears !== undefined && { experienceYears: Number(experienceYears) }),
+      ...(clinicName && { clinicName }),
+      ...(clinicAddress && { clinicAddress }),
+      ...(bio !== undefined && { bio }),
+    };
+
+    await user.save();
+
+    res.status(200).json({ success: true, user: user.toSafeObject() });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
-  getStats
+  getStats,
+  getProfile,
+  updateProfile,
 };

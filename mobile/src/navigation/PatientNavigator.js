@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Home, CalendarDays, MapPinned, FileText, MessageSquareMore, UserCircle2 } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 import HomeScreen from '../screens/patient/HomeScreen';
 import ProfileScreen from '../screens/patient/ProfileScreen';
@@ -12,7 +13,9 @@ import BookAppointment from '../screens/patient/BookAppointment';
 import AppointmentHistory from '../screens/patient/AppointmentHistory';
 import ReportsScreen from '../screens/patient/ReportsScreen';
 import ChatScreen from '../screens/patient/ChatScreen';
+import ConversationList from '../screens/patient/ConversationList';
 import NearbyDentists from '../screens/patient/NearbyDentists';
+import DoctorDetail from '../screens/patient/DoctorDetail';
 import Notifications from '../screens/patient/Notifications';
 import Settings from '../screens/patient/Settings';
 
@@ -26,7 +29,19 @@ function HomeStack() {
       <Stack.Screen name="SymptomChecker" component={SymptomChecker} />
       <Stack.Screen name="BookAppointment" component={BookAppointment} />
       <Stack.Screen name="NearbyDentists" component={NearbyDentists} />
+      <Stack.Screen name="DoctorDetail" component={DoctorDetail} />
+      <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen name="Notifications" component={Notifications} />
+      <Stack.Screen name="ChatScreen" component={ChatScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function ChatStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ConversationList" component={ConversationList} />
+      <Stack.Screen name="ChatScreen" component={ChatScreen} />
     </Stack.Navigator>
   );
 }
@@ -53,6 +68,7 @@ function ProfileStack() {
 export const PatientNavigator = () => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
@@ -92,12 +108,12 @@ export const PatientNavigator = () => {
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: 'Home' }} />
-      <Tab.Screen name="AppointmentsTab" component={AppointmentsStack} options={{ tabBarLabel: 'Bookings' }} />
-      <Tab.Screen name="MapTab" component={NearbyDentists} options={{ tabBarLabel: 'Map' }} />
-      <Tab.Screen name="ReportsTab" component={ReportsScreen} options={{ tabBarLabel: 'Reports' }} />
-      <Tab.Screen name="ChatTab" component={ChatScreen} options={{ tabBarLabel: 'Chat' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ tabBarLabel: 'Profile' }} />
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ tabBarLabel: t('navigation.home') }} />
+      <Tab.Screen name="AppointmentsTab" component={AppointmentsStack} options={{ tabBarLabel: t('navigation.bookings') }} />
+      <Tab.Screen name="MapTab" component={NearbyDentists} options={{ tabBarLabel: t('navigation.map') }} />
+      <Tab.Screen name="ReportsTab" component={ReportsScreen} options={{ tabBarLabel: t('navigation.reports') }} />
+      <Tab.Screen name="ChatTab" component={ChatStack} options={{ tabBarLabel: t('navigation.chat') }} />
+      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ tabBarLabel: t('navigation.profile') }} />
     </Tab.Navigator>
   );
 };

@@ -4,17 +4,19 @@ import { useTheme } from '../hooks/useTheme';
 import { fonts } from '../theme/fonts';
 import { formatDate, getStatusColor } from '../utils/helpers';
 import { Card } from './Card';
+import { useTranslation } from 'react-i18next';
 
-export const AppointmentCard = ({ appointment, onCancel, onAction, userRole = 'patient' }) => {
+export const AppointmentCard = ({ appointment, onCancel, onAction, onChat, userRole = 'patient' }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
   const styles = createStyles(colors);
   const isPatient = userRole === 'patient';
   const personName = isPatient
     ? appointment.dentist?.name || 'Dr. Dentist'
     : appointment.patient?.name || 'Patient';
   const subtitle = isPatient
-    ? appointment.dentist?.dentistProfile?.specialization || 'Dental Surgeon'
+    ? appointment.dentist?.dentistProfile?.specialization || t('appointmentCard.dentalSurgeon')
     : appointment.reason || 'Routine Checkup';
 
   const statusColor = getStatusColor(appointment.status);
@@ -27,7 +29,7 @@ export const AppointmentCard = ({ appointment, onCancel, onAction, userRole = 'p
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: `${statusColor}22`, borderColor: statusColor }]}>
-          <Text style={[styles.statusText, { color: statusColor }]}>{appointment.status || 'Pending'}</Text>
+          <Text style={[styles.statusText, { color: statusColor }]}>{t(`appointmentCard.${appointment.status}`, { defaultValue: appointment.status || t('appointmentCard.pending') })}</Text>
         </View>
       </View>
 
@@ -35,32 +37,37 @@ export const AppointmentCard = ({ appointment, onCancel, onAction, userRole = 'p
 
       <View style={styles.rowBetween}>
         <View style={styles.infoBlock}>
-          <Text style={styles.infoLabel}>DATE</Text>
+          <Text style={styles.infoLabel}>{t('appointmentCard.date')}</Text>
           <Text style={styles.infoValue}>{formatDate(appointment.date)}</Text>
         </View>
         <View style={styles.infoBlock}>
-          <Text style={styles.infoLabel}>TIME SLOT</Text>
+          <Text style={styles.infoLabel}>{t('appointmentCard.timeSlot')}</Text>
           <Text style={styles.infoValue}>{appointment.timeSlot || '10:00 AM'}</Text>
         </View>
       </View>
 
       {appointment.reason && (
         <View style={styles.reasonContainer}>
-          <Text style={styles.reasonLabel}>Reason:</Text>
+          <Text style={styles.reasonLabel}>{t('appointmentCard.reason')}</Text>
           <Text style={styles.reasonText}>{appointment.reason}</Text>
         </View>
       )}
 
-      {(onCancel || onAction) && (
+      {(onCancel || onAction || onChat) && (
         <View style={styles.actionRow}>
           {onCancel && appointment.status !== 'cancelled' && (
             <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('appointmentCard.cancel')}</Text>
             </TouchableOpacity>
           )}
           {onAction && (
             <TouchableOpacity onPress={onAction} style={styles.actionBtn}>
-              <Text style={styles.actionText}>Details</Text>
+              <Text style={styles.actionText}>{t('appointmentCard.details')}</Text>
+            </TouchableOpacity>
+          )}
+          {onChat && isPatient && (
+            <TouchableOpacity onPress={onChat} style={styles.actionBtn}>
+              <Text style={styles.actionText}>{t('chat.chat')}</Text>
             </TouchableOpacity>
           )}
         </View>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
@@ -8,6 +8,8 @@ import { ThemeProvider } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { ToastProvider } from './src/context/ToastContext';
+import './src/i18n';
+import { loadSavedLanguage } from './src/i18n';
 import { useTheme } from './src/hooks/useTheme';
 import RootNavigator from './src/navigation/RootNavigator';
 
@@ -25,6 +27,14 @@ const AppContent = () => (
 );
 
 export default function App() {
+  const [languageReady, setLanguageReady] = useState(false);
+
+  useEffect(() => {
+    loadSavedLanguage().finally(() => setLanguageReady(true));
+  }, []);
+
+  if (!languageReady) return null;
+
   return (
     <SafeAreaProvider>
       <Provider store={store}>

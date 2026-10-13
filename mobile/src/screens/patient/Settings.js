@@ -6,10 +6,12 @@ import { Header } from '../../components/Header';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { authService } from '../../services/authService';
+import { useTranslation } from 'react-i18next';
 
 export const Settings = ({ navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
   const styles = createStyles(colors);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -18,17 +20,17 @@ export const Settings = ({ navigation }) => {
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword) {
-      Alert.alert('Error', 'Please fill in both current and new passwords');
+      Alert.alert(t('common.error'), t('settings.fillPasswords'));
       return;
     }
     setLoading(true);
     try {
       await authService.updatePassword({ currentPassword, newPassword });
-      Alert.alert('Success', 'Password changed successfully');
+      Alert.alert(t('common.success'), t('settings.passwordChanged'));
       setCurrentPassword('');
       setNewPassword('');
     } catch (e) {
-      Alert.alert('Error', e.message);
+      Alert.alert(t('common.error'), e.message);
     } finally {
       setLoading(false);
     }
@@ -40,28 +42,28 @@ export const Settings = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+          <Text style={styles.sectionTitle}>{t('settings.preferences')}</Text>
           <View style={styles.rowBetween}>
-            <Text style={styles.label}>Push Notifications</Text>
+            <Text style={styles.label}>{t('settings.pushNotifications')}</Text>
             <Switch value={pushEnabled} onValueChange={setPushEnabled} trackColor={{ true: colors.primary }} />
           </View>
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Change Password</Text>
+          <Text style={styles.sectionTitle}>{t('settings.changePassword')}</Text>
           <Input
-            label="Current Password"
+            label={t('settings.currentPassword')}
             value={currentPassword}
             onChangeText={setCurrentPassword}
             secureTextEntry
           />
           <Input
-            label="New Password"
+            label={t('settings.newPassword')}
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry
           />
-          <Button title="Update Password" onPress={handleChangePassword} loading={loading} style={{ marginTop: 8 }} />
+          <Button title={t('settings.updatePassword')} onPress={handleChangePassword} loading={loading} style={{ marginTop: 8 }} />
         </View>
       </ScrollView>
     </View>

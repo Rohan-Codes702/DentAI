@@ -10,14 +10,16 @@ import { EmptyState } from '../../components/EmptyState';
 import { DiagnosisCard } from '../../components/DiagnosisCard';
 import { SkeletonStack } from '../../components/Skeleton';
 import { doctorService } from '../../services/doctorService';
+import { appointmentService } from '../../services/appointmentService';
 import { useTheme } from '../../hooks/useTheme';
 import { useSafeInsets } from '../../hooks/useSafeInsets';
-import { getGreeting } from '../../utils/helpers';
+import { useTranslation } from 'react-i18next';
 
 export const Dashboard = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
   const insets = useSafeInsets();
 
   const [stats, setStats] = useState({
@@ -37,13 +39,29 @@ export const Dashboard = ({ navigation }) => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsRes, diagRes] = await Promise.all([
+      const [statsRes, diagRes, appointmentsRes] = await Promise.all([
         doctorService.getStats().catch(() => null),
         doctorService.getDiagnoses('pending_review').catch(() => null),
+        appointmentService.getAppointments().catch(() => null),
       ]);
 
       if (statsRes?.stats) {
-        setStats(statsRes.stats);
+        const apiStats = statsRes.stats;
+        const today = new Date();
+        const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const todayAppointments = Array.isArray(appointmentsRes?.appointments)
+          ? appointmentsRes.appointments.filter((appointment) => {
+              const appointmentDate = new Date(appointment.date);
+              const appointmentKey = `${appointmentDate.getFullYear()}-${String(appointmentDate.getMonth() + 1).padStart(2, '0')}-${String(appointmentDate.getDate()).padStart(2, '0')}`;
+              return appointmentKey === todayKey && !['cancelled', 'completed', 'no_show'].includes(appointment.status);
+            }).length
+          : null;
+        setStats({
+          pendingReviews: apiStats.pendingReviews ?? apiStats.pendingDiagnoses ?? 0,
+          todayAppointments: todayAppointments ?? apiStats.todayAppointments ?? apiStats.upcomingAppointments ?? 0,
+          totalPatients: apiStats.totalPatients ?? 0,
+          totalXrays: apiStats.totalXrays ?? apiStats.totalDiagnoses ?? 0,
+        });
       }
       if (diagRes?.diagnoses) {
         setPendingDiagnoses(diagRes.diagnoses);
@@ -74,10 +92,10 @@ export const Dashboard = ({ navigation }) => {
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { color: colors.textPrimary }]}>
-            {getGreeting()}{user?.name ? `, Dr. ${user.name}` : ', Doctor'}
+            {user?.name ? t('dentistDashboard.greeting', { name: user.name }) : t('dentistDashboard.doctorGreeting')}
           </Text>
           <Text style={[styles.subgreeting, { color: colors.textSecondary }]}>
-            Here's what's happening in your practice today
+            {t('dentistDashboard.todayPractice')}
           </Text>
         </View>
         <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => navigation.navigate('Notifications')}>
@@ -88,8 +106,8 @@ export const Dashboard = ({ navigation }) => {
       <LinearGradient colors={[colors.primary, colors.primaryDark]} style={styles.hero}>
         <View style={styles.heroRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.heroLabel}>Practice Overview</Text>
-            <Text style={styles.heroTitle}>AI review queue and patient activity in real-time.</Text>
+            <Text style={styles.heroLabel}>{t('dentistDashboard.practiceOverview')}</Text>
+            <Text style={styles.heroTitle}>{t('dentistDashboard.reviewReady')}</Text>
           </View>
           <View style={styles.heroIconWrap}>
             <Stethoscope size={22} color="#fff" />
@@ -98,25 +116,25 @@ export const Dashboard = ({ navigation }) => {
         <View style={styles.heroStats}>
           <View style={styles.heroStatItem}>
             <Text style={styles.heroStatValue}>{stats.pendingReviews}</Text>
-            <Text style={styles.heroStatLabel}>Pending</Text>
+            <Text style={styles.heroStatLabel}>{t('dentistDashboard.pending')}</Text>
           </View>
           <View style={styles.heroStatItem}>
             <Text style={styles.heroStatValue}>{stats.todayAppointments}</Text>
-            <Text style={styles.heroStatLabel}>Today Appts</Text>
+            <Text style={styles.heroStatLabel}>{t('dentistDashboard.todayAppointmentsShort')}</Text>
           </View>
           <View style={styles.heroStatItem}>
             <Text style={styles.heroStatValue}>{stats.totalPatients}</Text>
-            <Text style={styles.heroStatLabel}>Patients</Text>
+            <Text style={styles.heroStatLabel}>{t('dentistDashboard.patients')}</Text>
           </View>
         </View>
       </LinearGradient>
 
       <View style={styles.statsRow}>
         {[
-          { label: 'Active Patients', value: stats.totalPatients, tone: colors.primary, icon: Users },
-          { label: 'Pending Reviews', value: stats.pendingReviews, tone: colors.warning, icon: ScanFace },
-          { label: 'Total AI Scans', value: stats.totalXrays, tone: colors.success, icon: Activity },
-          { label: 'Today Appointments', value: stats.todayAppointments, tone: colors.secondary, icon: CalendarCheck },
+          { label: t('dentistDashboard.activePatients'), value: stats.totalPatients, tone: colors.primary, icon: Users },
+          { label: t('dentistDashboard.pendingReviews'), value: stats.pendingReviews, tone: colors.warning, icon: ScanFace },
+          { label: t('dentistDashboard.totalScans'), value: stats.totalXrays, tone: colors.success, icon: Activity },
+          { label: t('dentistDashboard.todayAppointments'), value: stats.todayAppointments, tone: colors.secondary, icon: CalendarCheck },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -139,9 +157,9 @@ export const Dashboard = ({ navigation }) => {
           <ScanFace size={20} color={colors.primary} />
         </View>
         <View style={styles.bannerTextGroup}>
-          <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>Upload New Dental X-Ray</Text>
+          <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>{t('dentistDashboard.uploadXray')}</Text>
           <Text style={[styles.bannerSub, { color: colors.textSecondary }]}>
-            Run AI diagnostic scan and start the review workflow.
+            {t('dentistDashboard.uploadDescription')}
           </Text>
         </View>
         <ChevronRight size={18} color={colors.textMuted} />
@@ -149,7 +167,7 @@ export const Dashboard = ({ navigation }) => {
 
       <View style={styles.sectionHead}>
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-          Diagnoses Pending Review ({pendingDiagnoses.length})
+          {t('dentistDashboard.scansAwaitingReview', { count: pendingDiagnoses.length })}
         </Text>
       </View>
 
@@ -173,8 +191,8 @@ export const Dashboard = ({ navigation }) => {
       ) : (
         <EmptyState
           icon={ScanFace}
-          title="No pending reviews"
-          message="New scans will appear here as soon as the AI finishes analyzing them."
+          title={t('dentistDashboard.noPendingReviews')}
+          message={t('dentistDashboard.newScansMessage')}
           compact
         />
       )}

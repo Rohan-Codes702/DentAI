@@ -19,5 +19,11 @@ export const doctorService = {
   getStats: async () => {
     return await get('/dentists/stats');
   },
+  getProfile: async () => {
+    return await get('/dentists/profile');
+  },
+  updateProfile: async (data) => {
+    return await put('/dentists/profile', data);
+  },
 };
 

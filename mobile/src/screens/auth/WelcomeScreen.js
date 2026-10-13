@@ -5,10 +5,12 @@ import { getGradient } from '../../theme/colors';
 import { ArrowRight, ShieldCheck, Sparkles, Stethoscope } from 'lucide-react-native';
 import { Button } from '../../components/Button';
 import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 export const WelcomeScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}>
@@ -17,7 +19,7 @@ export const WelcomeScreen = ({ navigation }) => {
       <View style={styles.heroArea}>
         <View style={[styles.badge, { backgroundColor: colors.glass, borderColor: colors.border }]}>
           <Sparkles size={14} color={colors.primary} />
-          <Text style={[styles.badgeText, { color: colors.textSecondary }]}>AI Powered Dental Diagnosis</Text>
+          <Text style={[styles.badgeText, { color: colors.textSecondary }]}>{t('welcome.badge')}</Text>
         </View>
 
         <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -27,16 +29,16 @@ export const WelcomeScreen = ({ navigation }) => {
             </View>
             <View>
               <Text style={[styles.title, { color: colors.textPrimary }]}>DentAI</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Modern tele-dentistry for patients, dentists, and clinics.</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('welcome.subtitle')}</Text>
             </View>
           </View>
 
-          <Text style={[styles.headline, { color: colors.textPrimary }]}>Premium oral care, AI screening, and effortless booking.</Text>
-          <Text style={[styles.copy, { color: colors.textSecondary }]}>Track health scores, send X-rays for analysis, book appointments, and chat with your care team inside one polished workspace.</Text>
+          <Text style={[styles.headline, { color: colors.textPrimary }]}>{t('welcome.headline')}</Text>
+          <Text style={[styles.copy, { color: colors.textSecondary }]}>{t('welcome.copy')}</Text>
 
           <View style={styles.ctaRow}>
-            <Button title="Get Started" onPress={() => navigation.navigate('Register')} icon={<ArrowRight size={18} color="#fff" />} />
-            <Button title="Login" variant="outline" onPress={() => navigation.navigate('Login')} />
+            <Button title={t('ui.Get Started')} onPress={() => navigation.navigate('Register')} icon={<ArrowRight size={18} color="#fff" />} />
+            <Button title={t('common.login')} variant="outline" onPress={() => navigation.navigate('Login')} />
           </View>
         </View>
 
@@ -44,17 +46,17 @@ export const WelcomeScreen = ({ navigation }) => {
           <View style={[styles.featureRow, { borderColor: colors.border }]}>
             <View style={styles.featureItem}>
               <ShieldCheck size={18} color={colors.success} />
-              <Text style={[styles.featureText, { color: colors.textSecondary }]}>Secure</Text>
+              <Text style={[styles.featureText, { color: colors.textSecondary }]}>{t('welcome.secure')}</Text>
             </View>
             <View style={styles.featureItem}>
               <Sparkles size={18} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.textSecondary }]}>AI Reports</Text>
+              <Text style={[styles.featureText, { color: colors.textSecondary }]}>{t('welcome.aiReports')}</Text>
             </View>
             <View style={styles.featureItem}>
               <View style={[styles.pill, { backgroundColor: colors.infoSoft }]}>
                 <Text style={[styles.pillText, { color: colors.primary }]}>24/7</Text>
               </View>
-              <Text style={[styles.featureText, { color: colors.textSecondary }]}>Support</Text>
+              <Text style={[styles.featureText, { color: colors.textSecondary }]}>{t('welcome.support')}</Text>
             </View>
           </View>
         </View>

@@ -20,12 +20,16 @@ export const generateLeafletMapHTML = (dentists = [], userCoords = null) => {
       var marker_${id} = L.marker([${lat}, ${lng}]).addTo(map);
       marker_${id}.bindPopup(\`
         <div style="font-family: sans-serif; padding: 4px; color: #0f172a;">
-          <h4 style="margin: 0 0 4px 0; color: #0ea5e9; font-size: 14px;">\${escapeHtml("${name}")}</h4>
+          <h4 style="margin: 0 0 4px 0; color: #0f766e; font-size: 14px;">\${escapeHtml("${name}")}</h4>
           <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #475569;">\${escapeHtml("${clinic}")}</p>
           <p style="margin: 0 0 8px 0; font-size: 11px; color: #64748b;">\${escapeHtml("${spec}")}</p>
           <button onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type: 'BOOK_DOCTOR', doctorId: '${id}', doctorName: '${name}'}))" 
-            style="background: #0ea5e9; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; width: 100%; cursor: pointer;">
+            style="background: #0f766e; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; width: 100%; cursor: pointer;">
             Book Appointment
+          </button>
+          <button onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type: 'CHAT_DOCTOR', doctorId: '${id}'}))" 
+            style="background: #f97361; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 6px;">
+            Chat with Doctor
           </button>
         </div>
       \`);

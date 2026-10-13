@@ -3,6 +3,7 @@ import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View } from 'rea
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../hooks/useTheme';
 import { fonts } from '../theme/fonts';
+import { useTranslation } from 'react-i18next';
 
 export const Button = ({
   title,
@@ -16,6 +17,7 @@ export const Button = ({
 }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   const getBackgroundColor = () => {
     if (disabled) return colors.surfaceLight;
@@ -43,7 +45,7 @@ export const Button = ({
     <>
       {icon}
       <Text style={[styles.text, { color: getTextColor() }, icon && { marginLeft: 8 }, textStyle]}>
-        {title}
+        {t(`ui.${title}`, { defaultValue: title })}
       </Text>
     </>
   );

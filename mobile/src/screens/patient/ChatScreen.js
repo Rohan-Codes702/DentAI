@@ -142,12 +142,23 @@ export const ChatScreen = ({ route, navigation }) => {
 
     try {
       if (socket?.connected) {
-        socket.emit('sendMessage', { receiverId: targetUserId, text }, (ack) => {
+        socket.emit('sendMessage', { receiverId: targetUserId, text }, async (ack) => {
           if (ack?.success && ack?.message) {
-            // Replace optimistic message with server-confirmed message
-            setMessages((prev) =>
-              prev.map((m) => (m._id === tempId ? ack.message : m))
-            );
+            setMessages((prev) => prev.map((m) => (m._id === tempId ? ack.message : m)));
+            return;
+          }
+
+          if (ack?.success === false) {
+            try {
+              const res = await chatService.sendMessage(targetUserId, { text });
+              if (res?.message) {
+                setMessages((prev) => prev.map((m) => (m._id === tempId ? res.message : m)));
+                return;
+              }
+            } catch (fallbackError) {
+              setMessages((prev) => prev.filter((m) => m._id !== tempId));
+              Alert.alert('Message failed', fallbackError.message || 'Unable to send message');
+            }
           }
         });
       } else {

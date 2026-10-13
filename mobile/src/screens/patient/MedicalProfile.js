@@ -6,16 +6,19 @@ import { Header } from '../../components/Header';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import { patientService } from '../../services/patientService';
+import { useTranslation } from 'react-i18next';
 
 export const MedicalProfile = ({ navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
   const styles = createStyles(colors);
-  const [bloodGroup, setBloodGroup] = useState('O+');
-  const [allergies, setAllergies] = useState('Penicillin');
-  const [medicalHistory, setMedicalHistory] = useState('Type 2 Diabetes');
-  const [medications, setMedications] = useState('Metformin 500mg');
-  const [emergencyContact, setEmergencyContact] = useState('Father: 9876500000');
+  const [bloodGroup, setBloodGroup] = useState('');
+  const [allergies, setAllergies] = useState('');
+  const [medicalHistory, setMedicalHistory] = useState('');
+  const [medications, setMedications] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -28,9 +31,17 @@ export const MedicalProfile = ({ navigation }) => {
       if (res?.user?.medicalProfile) {
         const mp = res.user.medicalProfile;
         if (mp.bloodGroup) setBloodGroup(mp.bloodGroup);
-        if (mp.allergies) setAllergies(mp.allergies.join(', '));
-        if (mp.medicalHistory) setMedicalHistory(mp.medicalHistory.join(', '));
-        if (mp.currentMedications) setMedications(mp.currentMedications.join(', '));
+        if (mp.allergies) setAllergies(Array.isArray(mp.allergies) ? mp.allergies.join(', ') : mp.allergies);
+        if (mp.medicalHistory) setMedicalHistory(Array.isArray(mp.medicalHistory) ? mp.medicalHistory.join(', ') : mp.medicalHistory);
+        if (mp.currentMedications) setMedications(Array.isArray(mp.currentMedications) ? mp.currentMedications.join(', ') : mp.currentMedications);
+        if (mp.emergencyContact) {
+          if (typeof mp.emergencyContact === 'string') {
+            setEmergencyContactName(mp.emergencyContact);
+          } else {
+            setEmergencyContactName(mp.emergencyContact.name || '');
+            setEmergencyContactPhone(mp.emergencyContact.phone || '');
+          }
+        }
       }
     } catch (e) {
       console.log('Error loading medical profile', e);
@@ -42,12 +53,15 @@ export const MedicalProfile = ({ navigation }) => {
     try {
       await patientService.updateProfile({
         bloodGroup,
-        allergies: allergies.split(',').map((s) => s.trim()),
-        medicalHistory: medicalHistory.split(',').map((s) => s.trim()),
-        currentMedications: medications.split(',').map((s) => s.trim()),
-        emergencyContact,
+        allergies: allergies ? allergies.split(',').map((s) => s.trim()) : [],
+        medicalHistory: medicalHistory ? medicalHistory.split(',').map((s) => s.trim()) : [],
+        currentMedications: medications ? medications.split(',').map((s) => s.trim()) : [],
+        emergencyContact: {
+          name: emergencyContactName,
+          phone: emergencyContactPhone,
+        },
       });
-      Alert.alert('Saved', 'Medical profile updated successfully');
+      Alert.alert(t('common.success'), t('medical.saved'));
     } catch (e) {
       Alert.alert('Error', e.message);
     } finally {
@@ -62,36 +76,43 @@ export const MedicalProfile = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
-          <Input label="Blood Group" value={bloodGroup} onChangeText={setBloodGroup} placeholder="e.g. O+, A+, B-" />
+          <Input label={t('medical.bloodGroup')} value={bloodGroup} onChangeText={setBloodGroup} placeholder={t('medical.bloodPlaceholder')} />
           <Input
-            label="Known Allergies"
+            label={t('medical.allergies')}
             value={allergies}
             onChangeText={setAllergies}
-            placeholder="e.g. Penicillin, Latex"
+            placeholder={t('medical.allergyPlaceholder')}
             multiline
           />
           <Input
-            label="Medical History"
+            label={t('medical.history')}
             value={medicalHistory}
             onChangeText={setMedicalHistory}
-            placeholder="e.g. Diabetes, Hypertension"
+            placeholder={t('medical.historyPlaceholder')}
             multiline
           />
           <Input
-            label="Current Medications"
+            label={t('medical.medications')}
             value={medications}
             onChangeText={setMedications}
-            placeholder="e.g. Metformin, Aspirin"
+            placeholder={t('medical.medicationPlaceholder')}
             multiline
           />
           <Input
-            label="Emergency Contact"
-            value={emergencyContact}
-            onChangeText={setEmergencyContact}
-            placeholder="Name & Phone number"
+            label={t('medical.contactName')}
+            value={emergencyContactName}
+            onChangeText={setEmergencyContactName}
+            placeholder={t('medical.contactPlaceholder')}
+          />
+          <Input
+            label={t('medical.contactPhone')}
+            value={emergencyContactPhone}
+            onChangeText={setEmergencyContactPhone}
+            placeholder={t('medical.phonePlaceholder')}
+            keyboardType="phone-pad"
           />
 
-          <Button title="Save Medical Profile" onPress={handleSave} loading={loading} style={styles.btn} />
+          <Button title={t('medical.save')} onPress={handleSave} loading={loading} style={styles.btn} />
         </View>
       </ScrollView>
     </View>

@@ -8,24 +8,54 @@ import { Card } from '../../components/Card';
 import { AppointmentCard } from '../../components/AppointmentCard';
 import { SkeletonStack } from '../../components/Skeleton';
 import { appointmentService } from '../../services/appointmentService';
+import { doctorService } from '../../services/doctorService';
 import { getGreeting } from '../../utils/helpers';
 import { useTheme } from '../../hooks/useTheme';
 import { useSafeInsets } from '../../hooks/useSafeInsets';
 import { useResponsive } from '../../utils/responsive';
+import { useTranslation } from 'react-i18next';
 
 export const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
   const insets = useSafeInsets();
   const { isSmallDevice } = useResponsive();
   const [upcomingAppointment, setUpcomingAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
-  const healthScore = 84;
+  const [healthScore, setHealthScore] = useState(null);
+  const [healthStatus, setHealthStatus] = useState('stable');
+  const [urgentCount, setUrgentCount] = useState(0);
 
   useEffect(() => {
     fetchAppointments();
+    fetchHealthSummary();
   }, []);
+
+  const fetchHealthSummary = async () => {
+    try {
+      const res = await doctorService.getDiagnoses();
+      const diagnoses = Array.isArray(res?.diagnoses) ? res.diagnoses : [];
+      const findings = diagnoses.flatMap((diagnosis) => {
+        const detections = diagnosis.detections || diagnosis.predictions || diagnosis.aiSummary?.conditionsFound || [];
+        return Array.isArray(detections) ? detections : [];
+      });
+      const highRiskFindings = findings.filter((finding) => {
+        const confidence = Number(finding.confidence ?? finding.score ?? 0);
+        const severity = String(finding.severity || '').toLowerCase();
+        return severity === 'high' || severity === 'urgent' || confidence >= 0.85;
+      });
+      const pendingReviews = diagnoses.filter((diagnosis) => ['pending', 'pending_review', 'awaiting'].includes(String(diagnosis.status || '').toLowerCase())).length;
+      const score = Math.max(0, Math.min(100, 100 - (highRiskFindings.length * 8) - (pendingReviews * 3)));
+      setHealthScore(score);
+      setUrgentCount(highRiskFindings.length);
+      setHealthStatus(highRiskFindings.length > 0 ? 'attention' : pendingReviews > 0 ? 'review' : 'stable');
+    } catch (e) {
+      console.log('Failed to fetch health summary', e);
+      setHealthScore(null);
+    }
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -54,8 +84,8 @@ export const HomeScreen = ({ navigation }) => {
           <LinearGradient colors={[colors.primary, colors.primaryDark]} style={styles.hero}>
             <View style={styles.heroTopRow}>
               <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={styles.greeting} numberOfLines={1}>{getGreeting()}, {user?.name || 'there'}</Text>
-                <Text style={styles.subgreeting}>Keep your smile healthy with AI diagnostics</Text>
+                <Text style={styles.greeting} numberOfLines={1}>{t('home.greeting', { name: user?.name || 'there' })}</Text>
+                <Text style={styles.subgreeting}>{t('home.healthyCare')}</Text>
               </View>
               <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Notifications')}>
                 <Bell size={20} color="#fff" />
@@ -64,28 +94,28 @@ export const HomeScreen = ({ navigation }) => {
 
             <View style={styles.heroMetrics}>
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Health Score</Text>
-                <Text style={styles.metricValue}>{healthScore}%</Text>
+                <Text style={styles.metricLabel}>{t('home.healthScore')}</Text>
+                <Text style={styles.metricValue}>{healthScore === null ? '--' : `${healthScore}%`}</Text>
                 <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${healthScore}%`, backgroundColor: '#22C55E' }]} />
+                  <View style={[styles.progressFill, { width: `${healthScore || 0}%`, backgroundColor: healthStatus === 'attention' ? '#F97316' : '#22C55E' }]} />
                 </View>
               </View>
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Today's status</Text>
-                <Text style={styles.metricValue}>Stable</Text>
-                <Text style={styles.metricSub}>No urgent symptoms detected</Text>
+                <Text style={styles.metricLabel}>{t('home.todayStatus')}</Text>
+                <Text style={styles.metricValue}>{healthStatus === 'attention' ? t('status.urgent') : healthStatus === 'review' ? t('status.pending') : t('home.stable')}</Text>
+                <Text style={styles.metricSub}>{urgentCount > 0 ? `${urgentCount} ${t('status.urgent')}` : t('home.noUrgentConcerns')}</Text>
               </View>
             </View>
           </LinearGradient>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Quick actions</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('home.quickActions')}</Text>
         <View style={styles.grid}>
           {[
-            { title: 'Nearby Clinics', desc: 'Map and filters', icon: MapPinned, action: 'NearbyDentists', tone: colors.primary },
-            { title: 'AI Checker', desc: 'Symptom triage', icon: Bot, action: 'SymptomChecker', tone: colors.success },
-            { title: 'Book Dentist', desc: 'Choose time slot', icon: CalendarPlus2, action: 'BookAppointment', tone: colors.secondary },
-            { title: 'AI Reports', desc: 'X-ray analysis', icon: FileText, action: 'ReportsTab', tone: colors.warning },
+            { title: t('home.nearbyClinics'), desc: t('home.findLocalDentists'), icon: MapPinned, action: 'NearbyDentists', tone: colors.primary },
+            { title: t('home.symptomChecker'), desc: t('home.checkSymptoms'), icon: Bot, action: 'SymptomChecker', tone: colors.success },
+            { title: t('home.bookDentist'), desc: t('home.scheduleVisit'), icon: CalendarPlus2, action: 'BookAppointment', tone: colors.secondary },
+            { title: t('home.dentalReports'), desc: t('home.viewScanResults'), icon: FileText, action: 'ReportsTab', tone: colors.warning },
           ].map((item) => {
             const Icon = item.icon;
             return (
@@ -110,9 +140,9 @@ export const HomeScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.sectionHead}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Next appointment</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('home.nextAppointment')}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('AppointmentsTab')}>
-            <Text style={[styles.link, { color: colors.primary }]}>View all</Text>
+            <Text style={[styles.link, { color: colors.primary }]}>{t('home.viewAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -129,10 +159,10 @@ export const HomeScreen = ({ navigation }) => {
         ) : (
           <Card style={styles.emptyCard} glass>
             <CalendarClock size={32} color={colors.primary} />
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No upcoming appointments</Text>
-            <Text style={[styles.emptySub, { color: colors.textSecondary }]}>Book a consultation with certified dentists nearby.</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{t('patientHome.noUpcoming')}</Text>
+            <Text style={[styles.emptySub, { color: colors.textSecondary }]}>{t('patientHome.bookNearby')}</Text>
             <TouchableOpacity style={[styles.bookNowBtn, { backgroundColor: colors.primary }]} onPress={() => navigation.navigate('BookAppointment')}>
-              <Text style={styles.bookNowText}>Book consultation</Text>
+              <Text style={styles.bookNowText}>{t('patientHome.bookConsultation')}</Text>
             </TouchableOpacity>
           </Card>
         )}
@@ -140,10 +170,10 @@ export const HomeScreen = ({ navigation }) => {
         <Card style={styles.tipCard} glass>
           <View style={styles.tipHead}>
             <Activity size={18} color={colors.primary} />
-            <Text style={[styles.tipTag, { color: colors.primary }]}>Daily oral health tip</Text>
+            <Text style={[styles.tipTag, { color: colors.primary }]}>{t('patientHome.dailyTip')}</Text>
           </View>
-          <Text style={[styles.tipTitle, { color: colors.textPrimary }]}>Brushing technique matters</Text>
-          <Text style={[styles.tipText, { color: colors.textSecondary }]}>Brush twice a day for two minutes using a soft-bristled brush. Hold your brush at a 45-degree angle toward your gum line.</Text>
+          <Text style={[styles.tipTitle, { color: colors.textPrimary }]}>{t('patientHome.brushingMatters')}</Text>
+          <Text style={[styles.tipText, { color: colors.textSecondary }]}>{t('patientHome.brushingAdvice')}</Text>
         </Card>
       </ScrollView>
 
@@ -357,7 +387,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: 'rgba(37,99,235,0.38)',
+    shadowColor: 'rgba(15,118,110,0.32)',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 1,
     shadowRadius: 20,

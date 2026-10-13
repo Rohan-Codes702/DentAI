@@ -9,11 +9,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useToast } from '../../hooks/useToast';
 import { validateEmail, validatePassword } from '../../utils/validators';
+import { useTranslation } from 'react-i18next';
 
 export const LoginScreen = ({ navigation }) => {
   const { login, googleLogin, appleLogin } = useAuth();
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +35,7 @@ export const LoginScreen = ({ navigation }) => {
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      toast.error('Check your credentials', 'Please enter a valid email and password.');
+      toast.error(t('auth.checkCredentials'), t('auth.validEmailPassword'));
       return;
     }
 
@@ -43,11 +45,11 @@ export const LoginScreen = ({ navigation }) => {
     setLoading(false);
 
     if (!result.success) {
-      toast.error('Login failed', result.message || 'Invalid email or password');
+      toast.error(t('auth.loginFailed'), result.message || t('auth.invalidEmailPassword'));
       return;
     }
 
-    toast.success('Welcome back', 'Authentication was successful.');
+    toast.success(t('auth.welcomeBack'), t('auth.welcomeMessage'));
   };
 
   const handleGoogleLogin = () => {
@@ -99,7 +101,7 @@ export const LoginScreen = ({ navigation }) => {
           <Text style={[styles.logoText, { color: colors.textPrimary }]}>DentAI</Text>
         </View>
 
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Welcome back</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{t('auth.welcomeBack')}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sign in to your premium tele-dentistry workspace.</Text>
 
         <View style={styles.badgeRow}>
@@ -137,7 +139,7 @@ export const LoginScreen = ({ navigation }) => {
         </View>
 
         <Input
-          label="Email Address"
+          label={t('auth.emailAddress')}
           value={email}
           onChangeText={setEmail}
           placeholder="e.g. doctor@dentaicare.com"
@@ -147,7 +149,7 @@ export const LoginScreen = ({ navigation }) => {
         />
 
         <Input
-          label="Password"
+          label={t('auth.password')}
           value={password}
           onChangeText={setPassword}
           placeholder="••••••••"
@@ -161,26 +163,26 @@ export const LoginScreen = ({ navigation }) => {
             <View style={[styles.checkbox, { backgroundColor: rememberMe ? colors.primary : 'transparent', borderColor: colors.primary }]}>
               {rememberMe && <Text style={styles.checkboxMark}>✓</Text>}
             </View>
-            <Text style={[styles.rememberText, { color: colors.textSecondary }]}>Remember me</Text>
+            <Text style={[styles.rememberText, { color: colors.textSecondary }]}>{t('auth.rememberMe')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-            <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot password?</Text>
+            <Text style={[styles.forgotText, { color: colors.primary }]}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
         </View>
 
         <Button
-          title="Sign In"
+          title={t('auth.signIn')}
           onPress={handleLogin}
           loading={loading}
           style={styles.loginBtn}
           icon={<Fingerprint size={18} color="#fff" />}
         />
 
-        <Text style={[styles.helper, { color: colors.textSecondary }]}>Protected access with secure session handling and medical-grade privacy controls.</Text>
+        <Text style={[styles.helper, { color: colors.textSecondary }]}>{t('auth.protectedAccess')}</Text>
 
         <View style={styles.footerRow}>
-          <Text style={[styles.footerText, { color: colors.textSecondary }]}>Don't have an account? </Text>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t('auth.noAccount')} </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
             <Text style={[styles.registerLink, { color: colors.primary }]}>Register</Text>
           </TouchableOpacity>

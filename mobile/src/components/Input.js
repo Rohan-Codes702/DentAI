@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-nativ
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 import { fonts } from '../theme/fonts';
+import { useTranslation } from 'react-i18next';
 
 export const Input = ({
   label,
@@ -22,6 +23,7 @@ export const Input = ({
   const [isFocused, setIsFocused] = useState(false);
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   const dynamicWrapperStyle = {
     backgroundColor: colors.surface,
@@ -30,7 +32,7 @@ export const Input = ({
 
   return (
     <View style={[styles.container, style]}>
-      {label && <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: colors.textSecondary }]}>{t(`ui.${label}`, { defaultValue: label })}</Text>}
       <View style={[styles.inputWrapper, dynamicWrapperStyle]}>
         {icon && <View style={styles.iconWrapper}>{icon}</View>}
         <TextInput
@@ -42,7 +44,7 @@ export const Input = ({
           ]}
           value={value}
           onChangeText={onChangeText}
-          placeholder={placeholder}
+          placeholder={placeholder ? t(`ui.${placeholder}`, { defaultValue: placeholder }) : placeholder}
           placeholderTextColor={colors.textMuted}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
           keyboardType={keyboardType}
@@ -61,7 +63,7 @@ export const Input = ({
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: colors.danger }]}>{t(`ui.${error}`, { defaultValue: error })}</Text>}
     </View>
   );
 };

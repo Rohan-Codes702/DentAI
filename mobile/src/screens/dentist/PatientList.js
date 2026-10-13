@@ -199,6 +199,13 @@ export const PatientList = ({ navigation }) => {
                       : 'No pre-existing conditions recorded'}
                   </Text>
 
+                  <Text style={[styles.subLabel, { color: colors.textMuted }]}>Current Medications:</Text>
+                  <Text style={[styles.subValue, { color: colors.textPrimary }]}>
+                    {selectedPatient.medicalProfile?.currentMedications?.length > 0
+                      ? selectedPatient.medicalProfile.currentMedications.join(', ')
+                      : 'None'}
+                  </Text>
+
                   {selectedPatient.medicalProfile?.emergencyContact?.name ? (
                     <View style={styles.emergencyBox}>
                       <ShieldAlert size={14} color={colors.warning} />
@@ -215,7 +222,10 @@ export const PatientList = ({ navigation }) => {
                     onPress={() => {
                       const p = selectedPatient;
                       setSelectedPatient(null);
-                      navigation.navigate('ChatTab', { patientId: p._id, patientName: p.name });
+                      navigation.navigate('ChatTab', {
+                        patientId: p._id,
+                        patientName: p.name,
+                      });
                     }}
                     style={{ flex: 1 }}
                   />
@@ -226,6 +236,15 @@ export const PatientList = ({ navigation }) => {
                       const p = selectedPatient;
                       setSelectedPatient(null);
                       navigation.navigate('UploadTab', { patientId: p._id, patientName: p.name });
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title="View Reports"
+                    variant="outline"
+                    onPress={() => {
+                      setSelectedPatient(null);
+                      navigation.navigate('ReportsTab');
                     }}
                     style={{ flex: 1 }}
                   />

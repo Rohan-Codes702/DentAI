@@ -3,7 +3,7 @@ import { lightColors } from '../theme/colors';
 
 export const ThemeContext = createContext();
 
-// DentAI is a light-only, sky-blue + white healthcare product — dark mode has
+// DentAI is a light-only, clinical teal healthcare product — dark mode has
 // been removed. This provider still exposes the same shape (`theme`, `isDark`,
 // `themeMode`, `setThemeMode`, `toggleTheme`, `hydrated`) that the rest of the
 // app already consumes via useTheme(), so no other screen needs to change.

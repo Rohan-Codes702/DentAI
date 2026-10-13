@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getGradient } from '../../theme/colors';
@@ -13,7 +13,7 @@ import { validateEmail, validatePassword, validatePhone } from '../../utils/vali
 import { ROLES } from '../../utils/constants';
 
 export const RegisterScreen = ({ navigation }) => {
-  const { register, sendOtp } = useAuth();
+  const { register, sendOtp, updateAvatar } = useAuth();
   const { theme } = useTheme();
   const { colors } = theme;
   const toast = useToast();
@@ -28,6 +28,28 @@ export const RegisterScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Dynamic Dentist fields
+  const [specialization, setSpecialization] = useState('General Dentistry');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [experienceYears, setExperienceYears] = useState('');
+  const [clinicName, setClinicName] = useState('');
+  const [clinicAddress, setClinicAddress] = useState('');
+  const [bio, setBio] = useState('');
+
+  // Dynamic Patient fields
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [gender, setGender] = useState('male');
+  const [city, setCity] = useState('');
+  const [street, setStreet] = useState('');
+  const [stateName, setStateName] = useState('');
+  const [zip, setZip] = useState('');
+  const [bloodGroup, setBloodGroup] = useState('O+');
+  const [allergies, setAllergies] = useState('');
+  const [medicalHistory, setMedicalHistory] = useState('');
+  const [currentMedications, setCurrentMedications] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+
   const strength = useMemo(() => {
     let score = 0;
     if (password.length >= 8) score += 1;
@@ -38,22 +60,47 @@ export const RegisterScreen = ({ navigation }) => {
   }, [password]);
 
   const pickProfileImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      toast.warning('Photo access required', 'Grant gallery access to upload a profile image.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.9,
-    });
-
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      setProfileImage(result.assets[0].uri);
-    }
+    Alert.alert('Select Profile Photo', 'Choose an option to add your photo', [
+      {
+        text: 'Take Photo with Camera',
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) {
+            toast.warning('Camera access required', 'Grant camera access to take a profile photo.');
+            return;
+          }
+          const res = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!res.canceled && res.assets?.[0]?.uri) {
+            setProfileImage(res.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: 'Choose from Photo Library',
+        onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) {
+            toast.warning('Photo access required', 'Grant gallery access to upload a profile image.');
+            return;
+          }
+          const res = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!res.canceled && res.assets?.[0]?.uri) {
+            setProfileImage(res.assets[0].uri);
+          }
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const handleContinue = async () => {
@@ -96,14 +143,56 @@ export const RegisterScreen = ({ navigation }) => {
     }
 
     setLoading(true);
-    const result = await register({ name, email, password, role, phone, otp: otpCode });
-    setLoading(false);
+    const registerPayload = {
+      name,
+      email,
+      password,
+      role,
+      phone,
+      otp: otpCode,
+    };
+
+    if (role === ROLES.DENTIST) {
+      registerPayload.specialization = specialization;
+      registerPayload.licenseNumber = licenseNumber;
+      registerPayload.experienceYears = experienceYears;
+      registerPayload.clinicName = clinicName;
+      registerPayload.clinicAddress = clinicAddress;
+      registerPayload.bio = bio;
+    } else if (role === ROLES.PATIENT) {
+      registerPayload.dateOfBirth = dateOfBirth;
+      registerPayload.gender = gender;
+      registerPayload.address = { street, city, state: stateName, zip };
+      registerPayload.medicalProfile = {
+        bloodGroup,
+        allergies: allergies ? allergies.split(',').map((s) => s.trim()) : [],
+        medicalHistory: medicalHistory ? medicalHistory.split(',').map((s) => s.trim()) : [],
+        currentMedications: currentMedications ? currentMedications.split(',').map((s) => s.trim()) : [],
+        emergencyContact: {
+          name: emergencyContactName,
+          phone: emergencyContactPhone,
+        },
+      };
+    }
+
+    const result = await register(registerPayload);
 
     if (!result.success) {
+      setLoading(false);
       toast.error('Registration failed', result.message || 'Error creating account');
       return;
     }
 
+    // Upload profile picture if one was picked during registration
+    if (profileImage) {
+      try {
+        await updateAvatar(profileImage);
+      } catch (imgErr) {
+        console.log('Avatar upload during registration warning:', imgErr);
+      }
+    }
+
+    setLoading(false);
     toast.success('Account created', 'Your DentAI profile is ready to use.');
   };
 
@@ -115,10 +204,10 @@ export const RegisterScreen = ({ navigation }) => {
       <View style={styles.headerBox}>
         <View style={[styles.badge, { backgroundColor: colors.glass, borderColor: colors.border }]}>
           <Sparkles size={14} color={colors.primary} />
-          <Text style={[styles.badgeText, { color: colors.textSecondary }]}>Premium onboarding</Text>
+          <Text style={[styles.badgeText, { color: colors.textSecondary }]}>Welcome to DentAI</Text>
         </View>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Create your account</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Register as a patient or dentist and finish profile verification in minutes.</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Join as a patient or dentist to access personalized dental care in minutes.</Text>
       </View>
 
       <View style={styles.stepper}>
@@ -168,8 +257,8 @@ export const RegisterScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
           <View style={styles.profileCopy}>
-            <Text style={[styles.profileTitle, { color: colors.textPrimary }]}>Profile image upload</Text>
-            <Text style={[styles.profileText, { color: colors.textSecondary }]}>Add a professional photo for clinics, chat, and booking confirmation screens.</Text>
+            <Text style={[styles.profileTitle, { color: colors.textPrimary }]}>Profile photo</Text>
+            <Text style={[styles.profileText, { color: colors.textSecondary }]}>Add a photo to help identify your profile on appointments and reports.</Text>
           </View>
         </View>
 
@@ -214,19 +303,133 @@ export const RegisterScreen = ({ navigation }) => {
               icon={<Lock size={18} color={colors.textMuted} />}
             />
 
+            {/* Role-Specific Practice / Medical Form Fields */}
+            {role === ROLES.DENTIST ? (
+              <View style={{ marginTop: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.primary, marginBottom: 8 }}>
+                  Dental Practice Info
+                </Text>
+                <Input
+                  label="Specialization"
+                  value={specialization}
+                  onChangeText={setSpecialization}
+                  placeholder="e.g. Orthodontics, General Dentistry"
+                />
+                <Input
+                  label="Medical License Number"
+                  value={licenseNumber}
+                  onChangeText={setLicenseNumber}
+                  placeholder="e.g. MH-DENT-88491"
+                />
+                <Input
+                  label="Years of Experience"
+                  value={experienceYears}
+                  onChangeText={setExperienceYears}
+                  placeholder="e.g. 8"
+                  keyboardType="number-pad"
+                />
+                <Input
+                  label="Clinic Name"
+                  value={clinicName}
+                  onChangeText={setClinicName}
+                  placeholder="e.g. DentAI Super Speciality Clinic"
+                />
+                <Input
+                  label="Clinic Address"
+                  value={clinicAddress}
+                  onChangeText={setClinicAddress}
+                  placeholder="e.g. Nashik, Maharashtra"
+                />
+                <Input
+                  label="About your Practice"
+                  value={bio}
+                  onChangeText={setBio}
+                  placeholder="Brief summary of your clinical background..."
+                  multiline
+                />
+              </View>
+            ) : role === ROLES.PATIENT ? (
+              <View style={{ marginTop: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.primary, marginBottom: 8 }}>
+                  Personal Health Details
+                </Text>
+                <Input
+                  label="Date of Birth"
+                  value={dateOfBirth}
+                  onChangeText={setDateOfBirth}
+                  placeholder="e.g. 1995-08-15"
+                />
+                <Input
+                  label="City"
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="e.g. Nashik"
+                />
+                <Input
+                  label="Street Address"
+                  value={street}
+                  onChangeText={setStreet}
+                  placeholder="e.g. Main Street"
+                />
+                <Input
+                  label="State"
+                  value={stateName}
+                  onChangeText={setStateName}
+                  placeholder="e.g. Maharashtra"
+                />
+                <Input
+                  label="Blood Group"
+                  value={bloodGroup}
+                  onChangeText={setBloodGroup}
+                  placeholder="e.g. O+, A+, B-"
+                />
+                <Input
+                  label="Known Allergies"
+                  value={allergies}
+                  onChangeText={setAllergies}
+                  placeholder="e.g. Penicillin, Latex"
+                />
+                <Input
+                  label="Medical Conditions"
+                  value={medicalHistory}
+                  onChangeText={setMedicalHistory}
+                  placeholder="e.g. Diabetes, Asthma"
+                />
+                <Input
+                  label="Current Medications"
+                  value={currentMedications}
+                  onChangeText={setCurrentMedications}
+                  placeholder="e.g. Aspirin, Metformin"
+                />
+                <Input
+                  label="Emergency Contact Name"
+                  value={emergencyContactName}
+                  onChangeText={setEmergencyContactName}
+                  placeholder="e.g. Family member or friend"
+                />
+                <Input
+                  label="Emergency Contact Phone"
+                  value={emergencyContactPhone}
+                  onChangeText={setEmergencyContactPhone}
+                  placeholder="e.g. 9876543210"
+                  keyboardType="phone-pad"
+                />
+              </View>
+            ) : null}
+
             <View style={styles.strengthRow}>
               {[1, 2, 3, 4].map((item) => (
                 <View key={item} style={[styles.strengthBar, { backgroundColor: strength >= item ? colors.primary : colors.surfaceLight }]} />
               ))}
             </View>
-            <Text style={[styles.strengthCopy, { color: colors.textSecondary }]}>Password strength improves with upper case, numbers, and symbols.</Text>
+            <Text style={[styles.strengthCopy, { color: colors.textSecondary }]}>Tip: Combine letters and numbers for a strong password.</Text>
           </>
         )}
 
         {step >= 3 && (
           <View style={styles.otpCard}>
-            <Text style={[styles.otpTitle, { color: colors.textPrimary }]}>OTP verification</Text>
-            <Text style={[styles.otpText, { color: colors.textSecondary }]}>Enter the 4-digit code sent to your email or phone to activate secure access.</Text>
+            <Text style={[styles.otpTitle, { color: colors.textPrimary }]}>Verify Email Code</Text>
+            <Text style={[styles.otpText, { color: colors.textSecondary }]}>Enter the 4-digit verification code sent to your email to confirm your account.</Text>
             <Input
               label="Verification Code"
               value={otpCode}
@@ -323,7 +526,7 @@ const styles = StyleSheet.create({
   roleLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#52706D',
     marginBottom: 8,
   },
   roleContainer: {
@@ -339,21 +542,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#D8EAE6',
     flexDirection: 'row',
     gap: 8,
   },
   roleBtnActive: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#0EA5E9',
+    backgroundColor: '#EAF7F4',
+    borderColor: '#2A9D8F',
   },
   roleText: {
-    color: '#64748B',
+    color: '#52706D',
     fontSize: 13,
     fontWeight: '800',
   },
   roleTextActive: {
-    color: '#0EA5E9',
+    color: '#0F766E',
   },
   profileRow: {
     flexDirection: 'row',
@@ -411,7 +614,7 @@ const styles = StyleSheet.create({
   otpCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#D8EAE6',
     padding: 16,
     marginTop: 8,
     backgroundColor: 'rgba(255,255,255,0.72)',
@@ -459,7 +662,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   footerText: {
-    color: '#64748B',
+    color: '#52706D',
     fontSize: 13,
   },
   loginLink: {

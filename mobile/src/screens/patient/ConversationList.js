@@ -15,12 +15,16 @@ import { SkeletonStack } from '../../components/Skeleton';
 import { chatService } from '../../services/chatService';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
+import { useSocket } from '../../hooks/useSocket';
 import { getInitials } from '../../utils/helpers';
+import { useTranslation } from 'react-i18next';
 
 export const ConversationList = ({ navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
+  const { socket } = useSocket();
+  const { t } = useTranslation();
 
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +33,12 @@ export const ConversationList = ({ navigation }) => {
   useEffect(() => {
     fetchConversations();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('newMessage', fetchConversations);
+    return () => socket.off('newMessage', fetchConversations);
+  }, [socket]);
 
   const fetchConversations = async () => {
     try {
@@ -81,7 +91,7 @@ export const ConversationList = ({ navigation }) => {
         }
         renderItem={({ item }) => {
           const otherUser = getOtherUser(item);
-          const lastMsgText = item.lastMessage?.text || (item.lastMessage?.attachment ? '📷 Attachment' : 'No messages yet');
+          const lastMsgText = item.lastMessage?.text || (item.lastMessage?.attachment ? `📷 ${t('chat.attachment')}` : t('chat.noMessages'));
           const dateStr = item.lastMessage?.createdAt
             ? new Date(item.lastMessage.createdAt).toLocaleDateString([], {
                 month: 'short',
@@ -141,10 +151,10 @@ export const ConversationList = ({ navigation }) => {
             <View style={styles.emptyState}>
               <MessageSquare size={48} color={colors.textMuted} />
               <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                No conversations yet
+                {t('chat.noConversations')}
               </Text>
               <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
-                Book an appointment or visit a doctor's profile to start chatting.
+                {t('chat.startChat')}
               </Text>
             </View>
           ) : null

@@ -51,6 +51,15 @@ export const NearbyDentists = ({ navigation }) => {
           dentistName: data.doctorName,
         });
       }
+      if (data.type === 'CHAT_DOCTOR') {
+        const dentist = dentists.find((item) => (item._id || item.id) === data.doctorId);
+        if (dentist) {
+          navigation.navigate('ChatTab', {
+            screen: 'ChatScreen',
+            params: { dentist },
+          });
+        }
+      }
     } catch (err) {
       console.error('Error handling map event:', err);
     }

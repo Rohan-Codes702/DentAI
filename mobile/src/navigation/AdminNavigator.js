@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ShieldCheck, Users, Building2, ChartColumnIncreasing, Settings2 } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 import Dashboard from '../screens/admin/Dashboard';
 import ManageDoctors from '../screens/admin/ManageDoctors';
@@ -14,6 +15,7 @@ const Tab = createBottomTabNavigator();
 export const AdminNavigator = () => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
@@ -52,9 +54,9 @@ export const AdminNavigator = () => {
         },
       })}
     >
-      <Tab.Screen name="AdminDashboard" component={Dashboard} options={{ tabBarLabel: 'Admin' }} />
-      <Tab.Screen name="ManageDoctors" component={ManageDoctors} options={{ tabBarLabel: 'Doctors' }} />
-      <Tab.Screen name="ManagePatients" component={ManagePatients} options={{ tabBarLabel: 'Patients' }} />
+      <Tab.Screen name="AdminDashboard" component={Dashboard} options={{ tabBarLabel: t('navigation.admin') }} />
+      <Tab.Screen name="ManageDoctors" component={ManageDoctors} options={{ tabBarLabel: t('auth.dentist') }} />
+      <Tab.Screen name="ManagePatients" component={ManagePatients} options={{ tabBarLabel: t('navigation.patients') }} />
       <Tab.Screen name="ManageHospitals" component={ManageHospitals} options={{ tabBarLabel: 'Hospitals' }} />
       <Tab.Screen name="Analytics" component={Analytics} options={{ tabBarLabel: 'Analytics' }} />
     </Tab.Navigator>

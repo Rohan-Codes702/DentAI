@@ -1,42 +1,76 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { fonts } from '../../theme/fonts';
 import { Header } from '../../components/Header';
 import { ChatBubble } from '../../components/ChatBubble';
 import { useAuth } from '../../hooks/useAuth';
+import { useSocket } from '../../hooks/useSocket';
+import { chatService } from '../../services/chatService';
 
 export const ChatScreen = ({ route }) => {
   const { theme } = useTheme();
   const { colors } = theme;
   const styles = createStyles(colors);
   const { user } = useAuth();
+  const { socket } = useSocket();
   const patientId = route?.params?.patientId;
   const patientName = route?.params?.patientName || 'Rohan Mane';
   const patient = { _id: patientId, name: patientName };
 
-  const [messages, setMessages] = useState([
-    {
-      _id: 'm1',
-      sender: 'patient',
-      text: 'Doctor, when should I come in for my filling treatment?',
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const flatListRef = useRef(null);
+  const [loading, setLoading] = useState(Boolean(patientId));
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      {
-        _id: Date.now().toString(),
-        sender: user?._id || 'dentist',
-        text: inputText.trim(),
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+  useEffect(() => {
+    if (!patientId) return;
+    setLoading(true);
+    chatService.getMessages(patientId)
+      .then((res) => setMessages(Array.isArray(res?.messages) ? res.messages : []))
+      .catch((error) => Alert.alert('Chat error', error.message || 'Unable to load messages'))
+      .finally(() => setLoading(false));
+  }, [patientId]);
+
+  useEffect(() => {
+    if (!socket || !patientId) return;
+
+    const handleNewMessage = (message) => {
+      const senderId = message.sender?._id || message.sender;
+      const receiverId = message.receiver?._id || message.receiver;
+      if (senderId !== patientId && receiverId !== patientId) return;
+      setMessages((current) => current.some((item) => item._id === message._id) ? current : [...current, message]);
+    };
+
+    socket.on('newMessage', handleNewMessage);
+    return () => socket.off('newMessage', handleNewMessage);
+  }, [socket, patientId]);
+
+  const handleSend = async () => {
+    const text = inputText.trim();
+    if (!patientId || !text) return;
     setInputText('');
+
+    try {
+      if (socket?.connected) {
+        socket.emit('sendMessage', { receiverId: patientId, text }, async (ack) => {
+          if (ack?.success) return;
+          if (ack?.success === false) {
+            try {
+              await chatService.sendMessage(patientId, { text });
+            } catch (fallbackError) {
+              setInputText(text);
+              Alert.alert('Message failed', fallbackError.message || 'Unable to send message');
+            }
+          }
+        });
+      } else {
+        await chatService.sendMessage(patientId, { text });
+      }
+    } catch (error) {
+      setInputText(text);
+      Alert.alert('Message failed', error.message || 'Unable to send message');
+    }
   };
 
   return (
@@ -47,14 +81,18 @@ export const ChatScreen = ({ route }) => {
     >
       <Header title={`Chat with ${patient.name}`} />
 
-      <FlatList
+      {loading ? <Text style={styles.loadingText}>Loading messages...</Text> : <FlatList
+        ref={flatListRef}
         data={messages}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item, index) => item._id?.toString() || index.toString()}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <ChatBubble message={item} isCurrentUser={item.sender === (user?._id || 'dentist')} />
+          <ChatBubble
+            message={item}
+            isCurrentUser={(item.sender?._id || item.sender) === user?._id}
+          />
         )}
-      />
+      />}
 
       <View style={styles.inputBar}>
         <TextInput
@@ -111,6 +149,12 @@ const createStyles = (colors) => StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  loadingText: {
+    flex: 1,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    color: colors.textMuted,
   },
 });
 

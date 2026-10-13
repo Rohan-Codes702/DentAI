@@ -19,16 +19,21 @@ import { ReportCard } from '../../components/ReportCard';
 import { SkeletonStack } from '../../components/Skeleton';
 import { Card } from '../../components/Card';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axiosInstance from '../../config/axios';
+
 import { doctorService } from '../../services/doctorService';
 import { reportService } from '../../services/reportService';
 
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 export const ReportsScreen = () => {
   const { theme } = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [diagnoses, setDiagnoses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +66,7 @@ export const ReportsScreen = () => {
       );
 
       setError(
-        'Unable to load reports. Check your connection and try again.'
+        t('reports.loadError')
       );
 
       setDiagnoses([]);
@@ -71,212 +76,52 @@ export const ReportsScreen = () => {
   };
 
   // --------------------------------------------------
-  // GET PDF USING AUTHENTICATED AXIOS
+  // OPEN / DOWNLOAD PDF REPORT
   // --------------------------------------------------
 
-  const getPdfBlob = async (diagnosisId) => {
-    try {
-      console.log(
-        '[Reports] Requesting authenticated PDF:',
-        diagnosisId
-      );
-
-      const blob =
-        await reportService.downloadReportPdf(
-          diagnosisId
-        );
-
-      if (!blob) {
-        throw new Error('Empty PDF response');
-      }
-
-      console.log(
-        '[Reports] PDF received successfully'
-      );
-
-      return blob;
-    } catch (error) {
-      console.error(
-        '[Reports] PDF request failed:',
-        error
-      );
-
-      throw error;
-    }
-  };
-
-  // --------------------------------------------------
-  // VIEW PDF
-  // --------------------------------------------------
-
-  const handleView = async (item) => {
+  const openOrDownloadPdf = async (item, isDownload = false) => {
     try {
       if (!item?._id) {
-        Alert.alert(
-          'Error',
-          'Invalid diagnosis ID.'
-        );
+        Alert.alert('Error', 'Invalid diagnosis ID.');
         return;
       }
 
-      const blob = await getPdfBlob(item._id);
-
-      // ----------------------------------------------
-      // WEB
-      // ----------------------------------------------
+      const token = await AsyncStorage.getItem('userToken');
+      const baseUrl = axiosInstance.defaults.baseURL || 'http://localhost:5000/api';
+      const pdfUrl = `${baseUrl}/reports/${item._id}/pdf?token=${token}`;
 
       if (Platform.OS === 'web') {
-        const blobUrl =
-          window.URL.createObjectURL(blob);
-
-        const newWindow = window.open(
-          blobUrl,
-          '_blank'
-        );
-
-        if (!newWindow) {
-          Alert.alert(
-            'Popup Blocked',
-            'Please allow popups for DentAI to view the PDF.'
-          );
+        if (isDownload) {
+          const blobData = await reportService.downloadReportPdf(item._id);
+          const blobUrl = window.URL.createObjectURL(new Blob([blobData], { type: 'application/pdf' }));
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = `dentai-diagnostic-report-${item._id}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+        } else {
+          window.open(pdfUrl, '_blank');
         }
-
-        // Give browser time to load PDF before cleanup
-        setTimeout(() => {
-          window.URL.revokeObjectURL(blobUrl);
-        }, 60000);
-
         return;
       }
 
-      // ----------------------------------------------
-      // MOBILE
-      // ----------------------------------------------
-
-      Alert.alert(
-        'PDF Ready',
-        'The PDF was downloaded successfully. Open it from your device downloads/files.'
-      );
-    } catch (error) {
-      console.error(
-        '[Reports] View PDF error:',
-        error
-      );
-
-      const status =
-        error?.response?.status ||
-        error?.status;
-
-      if (status === 401) {
-        Alert.alert(
-          'Authentication Required',
-          'Your login session has expired. Please login again.'
-        );
-      } else if (status === 403) {
-        Alert.alert(
-          'Access Denied',
-          'You are not authorized to view this report.'
-        );
-      } else if (status === 404) {
-        Alert.alert(
-          'Report Not Found',
-          'This report has not been generated yet.'
-        );
+      // Mobile (iOS & Android)
+      const canOpen = await Linking.canOpenURL(pdfUrl);
+      if (canOpen) {
+        await Linking.openURL(pdfUrl);
       } else {
-        Alert.alert(
-          'Unable to Open Report',
-          'Something went wrong while opening the PDF. Please try again.'
-        );
+        await Linking.openURL(pdfUrl);
       }
+    } catch (err) {
+      console.error('[Reports] Action error:', err);
+      Alert.alert('Report Error', 'Unable to retrieve PDF report. Please try again.');
     }
   };
 
-  // --------------------------------------------------
-  // DOWNLOAD PDF
-  // --------------------------------------------------
-
-  const handleDownload = async (item) => {
-    try {
-      if (!item?._id) {
-        Alert.alert(
-          'Error',
-          'Invalid diagnosis ID.'
-        );
-        return;
-      }
-
-      const blob = await getPdfBlob(item._id);
-
-      // ----------------------------------------------
-      // WEB DOWNLOAD
-      // ----------------------------------------------
-
-      if (Platform.OS === 'web') {
-        const blobUrl =
-          window.URL.createObjectURL(blob);
-
-        const link =
-          document.createElement('a');
-
-        link.href = blobUrl;
-
-        link.download =
-          'dentai-diagnostic-report.pdf';
-
-        document.body.appendChild(link);
-
-        link.click();
-
-        document.body.removeChild(link);
-
-        setTimeout(() => {
-          window.URL.revokeObjectURL(blobUrl);
-        }, 10000);
-
-        return;
-      }
-
-      // ----------------------------------------------
-      // MOBILE
-      // ----------------------------------------------
-
-      Alert.alert(
-        'PDF Received',
-        'The PDF was retrieved successfully. We will add native file saving next.'
-      );
-    } catch (error) {
-      console.error(
-        '[Reports] Download PDF error:',
-        error
-      );
-
-      const status =
-        error?.response?.status ||
-        error?.status;
-
-      if (status === 401) {
-        Alert.alert(
-          'Authentication Required',
-          'Your login session has expired. Please login again.'
-        );
-      } else if (status === 403) {
-        Alert.alert(
-          'Access Denied',
-          'You are not authorized to download this report.'
-        );
-      } else if (status === 404) {
-        Alert.alert(
-          'Report Not Found',
-          'This report has not been generated yet.'
-        );
-      } else {
-        Alert.alert(
-          'Download Failed',
-          'Unable to download the PDF. Please try again.'
-        );
-      }
-    }
-  };
+  const handleView = (item) => openOrDownloadPdf(item, false);
+  const handleDownload = (item) => openOrDownloadPdf(item, true);
 
   // --------------------------------------------------
   // STATS
@@ -343,12 +188,11 @@ export const ReportsScreen = () => {
               </View>
 
               <Text style={styles.heroTitle}>
-                Dental Reports
+                {t('reports.title')}
               </Text>
 
               <Text style={styles.heroSub}>
-                AI-analyzed X-rays reviewed and
-                confirmed by your dentist
+                {t('reports.subtitle')}
               </Text>
             </LinearGradient>
 
@@ -388,7 +232,7 @@ export const ReportsScreen = () => {
                       },
                     ]}
                   >
-                    Total
+                    {t('reports.total')}
                   </Text>
                 </View>
 
@@ -424,7 +268,7 @@ export const ReportsScreen = () => {
                       },
                     ]}
                   >
-                    Confirmed
+                    {t('reports.confirmed')}
                   </Text>
                 </View>
 
@@ -460,7 +304,7 @@ export const ReportsScreen = () => {
                       },
                     ]}
                   >
-                    Pending
+                    {t('reports.pending')}
                   </Text>
                 </View>
               </View>
@@ -503,7 +347,7 @@ export const ReportsScreen = () => {
                       },
                     ]}
                   >
-                    Retry
+                    {t('reports.retry')}
                   </Text>
                 </TouchableOpacity>
               </Card>

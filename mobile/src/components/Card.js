@@ -27,7 +27,7 @@ export const Card = ({ children, style, onPress, glass = false }) => {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 22,
+    borderRadius: 18,
     padding: 18,
     marginVertical: 8,
     borderWidth: 1,

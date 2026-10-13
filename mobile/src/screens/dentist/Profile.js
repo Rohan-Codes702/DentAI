@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../hooks/useTheme';
@@ -15,13 +18,62 @@ import { fonts } from '../../theme/fonts';
 import { useAuth } from '../../hooks/useAuth';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
+import { Input } from '../../components/Input';
+import { Button } from '../../components/Button';
+import { doctorService } from '../../services/doctorService';
+import { useDispatch } from 'react-redux';
+import { setUser } from '../../redux/authSlice';
 
 export const Profile = () => {
   const { theme } = useTheme();
   const { colors } = theme;
   const styles = createStyles(colors);
+  const dispatch = useDispatch();
   const { user, logout, updateAvatar } = useAuth();
+  
   const [uploading, setUploading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const dp = user?.dentistProfile || {};
+
+  // Form states
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [specialization, setSpecialization] = useState(dp.specialization || '');
+  const [licenseNumber, setLicenseNumber] = useState(dp.licenseNumber || '');
+  const [experienceYears, setExperienceYears] = useState(dp.experienceYears ? String(dp.experienceYears) : '');
+  const [clinicName, setClinicName] = useState(dp.clinicName || '');
+  const [clinicAddress, setClinicAddress] = useState(dp.clinicAddress || '');
+  const [bio, setBio] = useState(dp.bio || '');
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await doctorService.getProfile();
+      if (res?.user) {
+        dispatch(setUser(res.user));
+        populateForm(res.user);
+      }
+    } catch (e) {
+      console.log('Failed to fetch doctor profile:', e);
+    }
+  };
+
+  const populateForm = (u) => {
+    const p = u?.dentistProfile || {};
+    setName(u?.name || '');
+    setPhone(u?.phone || '');
+    setSpecialization(p.specialization || '');
+    setLicenseNumber(p.licenseNumber || '');
+    setExperienceYears(p.experienceYears ? String(p.experienceYears) : '');
+    setClinicName(p.clinicName || '');
+    setClinicAddress(p.clinicAddress || '');
+    setBio(p.bio || '');
+  };
 
   const handleAvatarPress = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -34,15 +86,11 @@ export const Profile = () => {
       return;
     }
 
-    Alert.alert(
-      'Update Profile Photo',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: () => openCamera() },
-        { text: 'Photo Library', onPress: () => openLibrary() },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    Alert.alert('Update Profile Photo', 'Choose an option', [
+      { text: 'Camera', onPress: () => openCamera() },
+      { text: 'Photo Library', onPress: () => openLibrary() },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const openCamera = async () => {
@@ -88,7 +136,34 @@ export const Profile = () => {
     }
   };
 
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      const res = await doctorService.updateProfile({
+        name,
+        phone,
+        specialization,
+        licenseNumber,
+        experienceYears,
+        clinicName,
+        clinicAddress,
+        bio,
+      });
+
+      if (res?.user) {
+        dispatch(setUser(res.user));
+        Alert.alert('Success', 'Profile updated successfully.');
+        setEditing(false);
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Failed to save profile changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <View style={styles.container}>
       <Header title="Dentist Profile" />
 
@@ -120,23 +195,64 @@ export const Profile = () => {
           </TouchableOpacity>
 
           <Text style={styles.tapHint}>Tap to change photo</Text>
-          <Text style={styles.name}>{user?.name || 'Dr. Rohan Mane'}</Text>
-          <Text style={styles.spec}>Orthodontics &amp; Dental Surgery</Text>
-          <Text style={styles.clinic}>DentAI Super Speciality Clinic • Nashik</Text>
+          <Text style={styles.name}>{user?.name ? `Dr. ${user.name}` : 'Doctor Profile'}</Text>
+          <Text style={styles.spec}>{dp.specialization || 'Dental Specialist'}</Text>
+          <Text style={styles.clinic}>
+            {dp.clinicName ? `${dp.clinicName}` : 'Practice Registered'}
+            {dp.clinicAddress ? ` • ${dp.clinicAddress}` : ''}
+          </Text>
         </View>
 
         <Card style={styles.card}>
-          <Text style={styles.title}>Practice Info</Text>
-          <Text style={styles.info}>License No: MH-DENT-88491</Text>
-          <Text style={styles.info}>Experience: 8 Years</Text>
-          <Text style={styles.info}>Verification Status: Verified ✓</Text>
+          <View style={styles.cardHeader}>
+            <Text style={styles.title}>Practice Info</Text>
+            <TouchableOpacity style={styles.editBtn} onPress={() => setEditing(true)}>
+              <Text style={styles.editBtnText}>Edit Details</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <Text style={styles.info}>License No: {dp.licenseNumber || 'Not provided'}</Text>
+          <Text style={styles.info}>Experience: {dp.experienceYears ? `${dp.experienceYears} Years` : 'Not provided'}</Text>
+          <Text style={styles.info}>
+            Verification Status: {dp.isVerified ? 'Verified ✓' : 'Pending Verification'}
+          </Text>
+          {user?.phone ? <Text style={styles.info}>Phone: {user.phone}</Text> : null}
+          {user?.email ? <Text style={styles.info}>Email: {user.email}</Text> : null}
+          {dp.bio ? <Text style={[styles.info, { marginTop: 8, fontStyle: 'italic' }]}>Bio: "{dp.bio}"</Text> : null}
         </Card>
 
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={editing} animationType="slide" transparent>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Edit Practice Profile</Text>
+            <ScrollView style={{ maxHeight: 420 }}>
+              <Input label="Full Name" value={name} onChangeText={setName} placeholder="Dr. Rohan Mane" />
+              <Input label="Phone Number" value={phone} onChangeText={setPhone} placeholder="9876543210" keyboardType="phone-pad" />
+              <Input label="Specialization" value={specialization} onChangeText={setSpecialization} placeholder="Orthodontics & Dental Surgery" />
+              <Input label="License Number" value={licenseNumber} onChangeText={setLicenseNumber} placeholder="MH-DENT-88491" />
+              <Input label="Experience (Years)" value={experienceYears} onChangeText={setExperienceYears} placeholder="8" keyboardType="number-pad" />
+              <Input label="Clinic Name" value={clinicName} onChangeText={setClinicName} placeholder="DentAI Super Speciality Clinic" />
+              <Input label="Clinic Address" value={clinicAddress} onChangeText={setClinicAddress} placeholder="Nashik, Maharashtra" />
+              <Input label="Bio" value={bio} onChangeText={setBio} placeholder="Brief bio of clinical background..." multiline />
+            </ScrollView>
+            
+            <View style={styles.modalActions}>
+              <Button title="Cancel" variant="outline" onPress={() => setEditing(false)} style={{ flex: 1 }} />
+              <Button title="Save Profile" onPress={handleSaveProfile} loading={saving} style={{ flex: 1 }} />
+            </View>
+          </View>
+        </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -212,15 +328,32 @@ const createStyles = (colors) =>
       fontSize: fonts.sizes.xs,
       color: colors.textSecondary,
       marginTop: 2,
+      textAlign: 'center',
     },
     card: {
       marginVertical: 12,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
     },
     title: {
       fontSize: fonts.sizes.md,
       fontWeight: fonts.weights.bold,
       color: colors.textPrimary,
-      marginBottom: 8,
+    },
+    editBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: colors.infoSoft,
+    },
+    editBtnText: {
+      fontSize: fonts.sizes.xs,
+      fontWeight: '700',
+      color: colors.primary,
     },
     info: {
       fontSize: fonts.sizes.sm,
@@ -238,6 +371,31 @@ const createStyles = (colors) =>
     logoutText: {
       color: '#fff',
       fontWeight: 'bold',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      padding: 20,
+    },
+    modalCard: {
+      borderRadius: 20,
+      padding: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 5,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      marginBottom: 14,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 16,
     },
   });
 

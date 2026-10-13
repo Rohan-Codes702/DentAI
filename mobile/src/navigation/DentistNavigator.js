@@ -1,8 +1,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LayoutDashboard, Users, Upload, MessageSquareMore, UserRound } from 'lucide-react-native';
+import { LayoutDashboard, Users, Upload, FileText, MessageSquareMore, UserRound } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 import Dashboard from '../screens/dentist/Dashboard';
 import PatientList from '../screens/dentist/PatientList';
@@ -22,6 +23,7 @@ function DashboardStack() {
       <Stack.Screen name="DentistDashboard" component={Dashboard} />
       <Stack.Screen name="UploadXray" component={UploadXray} />
       <Stack.Screen name="DiagnosisReview" component={DiagnosisReview} />
+      <Stack.Screen name="Reports" component={Reports} />
       <Stack.Screen name="Notifications" component={Notifications} />
     </Stack.Navigator>
   );
@@ -30,6 +32,7 @@ function DashboardStack() {
 export const DentistNavigator = () => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
@@ -60,6 +63,7 @@ export const DentistNavigator = () => {
             DashboardTab: LayoutDashboard,
             PatientsTab: Users,
             UploadTab: Upload,
+            ReportsTab: FileText,
             ChatTab: MessageSquareMore,
             ProfileTab: UserRound,
           };
@@ -68,11 +72,12 @@ export const DentistNavigator = () => {
         },
       })}
     >
-      <Tab.Screen name="DashboardTab" component={DashboardStack} options={{ tabBarLabel: 'Dashboard' }} />
-      <Tab.Screen name="PatientsTab" component={PatientList} options={{ tabBarLabel: 'Patients' }} />
-      <Tab.Screen name="UploadTab" component={UploadXray} options={{ tabBarLabel: 'Upload X-ray' }} />
-      <Tab.Screen name="ChatTab" component={ChatScreen} options={{ tabBarLabel: 'Messages' }} />
-      <Tab.Screen name="ProfileTab" component={Profile} options={{ tabBarLabel: 'Doctor Profile' }} />
+      <Tab.Screen name="DashboardTab" component={DashboardStack} options={{ tabBarLabel: t('navigation.dashboard') }} />
+      <Tab.Screen name="PatientsTab" component={PatientList} options={{ tabBarLabel: t('navigation.patients') }} />
+      <Tab.Screen name="UploadTab" component={UploadXray} options={{ tabBarLabel: t('home.uploadXray') }} />
+      <Tab.Screen name="ReportsTab" component={Reports} options={{ tabBarLabel: t('navigation.reports') }} />
+      <Tab.Screen name="ChatTab" component={ChatScreen} options={{ tabBarLabel: t('navigation.chat') }} />
+      <Tab.Screen name="ProfileTab" component={Profile} options={{ tabBarLabel: t('navigation.profile') }} />
     </Tab.Navigator>
   );
 };

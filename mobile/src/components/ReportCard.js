@@ -5,10 +5,27 @@ import { useTheme } from '../hooks/useTheme';
 import { formatDate } from '../utils/helpers';
 import { Card } from './Card';
 import { Button } from './Button';
+import { useTranslation } from 'react-i18next';
+
+const FINDING_KEYS = {
+  caries: 'Caries',
+  'periapical lesion': 'Periapical Lesion',
+  'impacted tooth': 'Impacted Tooth',
+  'tooth discoloration': 'Tooth Discoloration',
+  'missing tooth': 'Missing Tooth',
+  'root resorption': 'Root Resorption',
+  'crown fracture': 'Crown Fracture',
+  'bone loss': 'Bone Loss',
+  'periodontal disease': 'Periodontal Disease',
+  calculus: 'Calculus',
+  filling: 'Filling',
+  crown: 'Crown',
+};
 
 export const ReportCard = ({ report, onDownload, onView }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   const diagnosis = report.diagnosis || report;
   const summary = diagnosis.aiSummary || {};
@@ -17,6 +34,11 @@ export const ReportCard = ({ report, onDownload, onView }) => {
     : ['Panoramic Dental Scan'];
 
   const isVerified = diagnosis.status === 'confirmed';
+  const translateFinding = (value) => {
+    const normalized = String(value).toLowerCase();
+    const key = FINDING_KEYS[normalized] || value;
+    return t(`diseases.${key}`, { defaultValue: value });
+  };
 
   return (
     <Card style={styles.card}>
@@ -35,7 +57,7 @@ export const ReportCard = ({ report, onDownload, onView }) => {
             <Clock size={12} color={colors.warning} />
           )}
           <Text style={[styles.badgeText, { color: isVerified ? colors.success : colors.warning }]}>
-            {isVerified ? 'Verified' : 'Pending Review'}
+            {isVerified ? t('reports.verified') : t('reports.pendingReview')}
           </Text>
         </View>
       </View>
@@ -53,14 +75,14 @@ export const ReportCard = ({ report, onDownload, onView }) => {
           </View>
         )}
         <View style={styles.details}>
-          <Text style={[styles.findingsLabel, { color: colors.textSecondary }]}>Detected Conditions:</Text>
+          <Text style={[styles.findingsLabel, { color: colors.textSecondary }]}>{t('reports.detectedConditions')}</Text>
           {findings.map((finding, idx) => (
             <Text key={idx} style={[styles.findingItem, { color: colors.textPrimary }]} numberOfLines={1}>
-              • {typeof finding === 'string' ? finding : `${finding.condition} (${finding.count})`}
+              • {typeof finding === 'string' ? translateFinding(finding) : `${translateFinding(finding.condition)} (${finding.count})`}
             </Text>
           ))}
           <Text style={[styles.confidenceText, { color: colors.primary }]}>
-            Avg Confidence: {((summary.averageConfidence || 0.88) * 100).toFixed(0)}%
+            {t('reports.avgConfidence', { value: ((summary.averageConfidence || 0.88) * 100).toFixed(0) })}
           </Text>
         </View>
       </View>

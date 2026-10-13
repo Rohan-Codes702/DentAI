@@ -1,22 +1,26 @@
 import React from 'react';
+import { View, StyleSheet, Platform, StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { Loader } from '../components/Loader';
+import { useTranslation } from 'react-i18next';
 
 import AuthNavigator from './AuthNavigator';
 import PatientNavigator from './PatientNavigator';
 import DentistNavigator from './DentistNavigator';
 import AdminNavigator from './AdminNavigator';
 import { ROLES } from '../utils/constants';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export const RootNavigator = () => {
   const { user, isAuthenticated, initializing } = useAuth();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   if (initializing) {
-    return <Loader message="Initializing DentAI..." />;
+    return <Loader message={t('common.initializing')} />;
   }
 
   const renderRoleNavigator = () => {
@@ -61,7 +65,27 @@ export const RootNavigator = () => {
         },
       };
 
-  return <NavigationContainer theme={navigationTheme}>{renderRoleNavigator()}</NavigationContainer>;
+  return (
+    <NavigationContainer theme={navigationTheme}>
+      <View style={styles.root}>
+        {renderRoleNavigator()}
+        <View style={styles.languageSwitcher}>
+          <LanguageSwitcher />
+        </View>
+      </View>
+    </NavigationContainer>
+  );
 };
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  languageSwitcher: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 4 : 44,
+    right: 16,
+    zIndex: 100,
+    elevation: 100,
+  },
+});
 
 export default RootNavigator;

@@ -18,10 +18,12 @@ import { Card } from '../../components/Card';
 import { doctorService } from '../../services/doctorService';
 import { useTheme } from '../../hooks/useTheme';
 import { getInitials } from '../../utils/helpers';
+import { useTranslation } from 'react-i18next';
 
 export const UploadXray = ({ route, navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   const [imageUri, setImageUri] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -142,9 +144,9 @@ export const UploadXray = ({ route, navigation }) => {
           <View style={styles.heroIconWrap}>
             <ScanLine size={28} color="#fff" />
           </View>
-          <Text style={styles.heroTitle}>AI Dental Screening</Text>
+          <Text style={styles.heroTitle}>{t('upload.title')}</Text>
           <Text style={styles.heroSub}>
-            Upload a panoramic or bitewing X-ray for instant clinical AI analysis
+            {t('upload.subtitle')}
           </Text>
         </LinearGradient>
 
@@ -157,7 +159,7 @@ export const UploadXray = ({ route, navigation }) => {
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.patientLabel, { color: colors.textMuted }]}>Patient</Text>
+              <Text style={[styles.patientLabel, { color: colors.textMuted }]}>{t('upload.patient')}</Text>
               <Text style={[styles.patientName, { color: colors.textPrimary }]}>{patientName}</Text>
             </View>
             <CheckCircle2 size={18} color={colors.success} />
@@ -166,7 +168,7 @@ export const UploadXray = ({ route, navigation }) => {
           <Card style={[styles.patientBanner, { borderColor: colors.warning }]}>
             <AlertCircle size={18} color={colors.warning} />
             <Text style={[styles.noPatientText, { color: colors.warning }]}>
-              No patient selected. Please go back and select a patient from your list.
+              {t('upload.noPatient')}
             </Text>
           </Card>
         )}
@@ -188,7 +190,7 @@ export const UploadXray = ({ route, navigation }) => {
               <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="contain" />
               <View style={[styles.changeOverlay, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
                 <Upload size={18} color="#fff" />
-                <Text style={styles.changeText}>Tap to change</Text>
+                <Text style={styles.changeText}>{t('upload.change')}</Text>
               </View>
             </>
           ) : (
@@ -197,10 +199,10 @@ export const UploadXray = ({ route, navigation }) => {
                 <Upload size={24} color={colors.primary} />
               </View>
               <Text style={[styles.uploadText, { color: colors.textPrimary }]}>
-                Tap to select X-ray
+                {t('upload.select')}
               </Text>
               <Text style={[styles.uploadSub, { color: colors.textMuted }]}>
-                JPG, PNG formats supported
+                {t('upload.formats')}
               </Text>
             </View>
           )}
@@ -209,25 +211,25 @@ export const UploadXray = ({ route, navigation }) => {
         {/* Info card */}
         <Card style={styles.infoCard}>
           <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>
-            How AI analysis works
+            {t('upload.howWorks')}
           </Text>
           {[
-            '1. X-ray is securely encrypted and uploaded',
-            '2. Clinical AI model detects potential dental conditions',
-            '3. High-confidence findings are highlighted for review',
-            '4. You review, add clinical notes, and confirm the report',
+            t('upload.step1'),
+            t('upload.step2'),
+            t('upload.step3'),
+            t('upload.step4'),
           ].map((step, i) => (
             <Text key={i} style={[styles.infoStep, { color: colors.textSecondary }]}>
               {step}
             </Text>
           ))}
           <Text style={[styles.disclaimer, { color: colors.textMuted }]}>
-            ⚠️ AI analysis is a preliminary decision support tool. Dentist review is mandatory before any report is issued.
+            {t('upload.disclaimer')}
           </Text>
         </Card>
 
         <Button
-          title={loading ? 'Analyzing X-Ray...' : 'Run AI Diagnostics'}
+          title={loading ? t('upload.analyzing') : t('upload.run')}
           onPress={handleAnalyze}
           loading={loading}
           style={styles.btn}

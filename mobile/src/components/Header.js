@@ -1,12 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, StatusBar } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { fonts } from '../theme/fonts';
 
 export const Header = ({ title, subtitle, showBack = false, onBackPress, rightElement }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
+  const translateTitle = (value) => {
+    if (value?.startsWith('Chat with ')) {
+      return t('screenTitles.Chat with {{name}}', { name: value.slice('Chat with '.length), defaultValue: value });
+    }
+    return t(`screenTitles.${value}`, { defaultValue: value });
+  };
 
   const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 12 : 48;
 
@@ -20,8 +28,8 @@ export const Header = ({ title, subtitle, showBack = false, onBackPress, rightEl
             </TouchableOpacity>
           )}
           <View style={styles.titleWrap}>
-            <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text>
-            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>{subtitle}</Text>}
+            <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>{translateTitle(title)}</Text>
+            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>{translateTitle(subtitle)}</Text>}
           </View>
         </View>
         {rightElement && <View>{rightElement}</View>}
@@ -33,6 +41,11 @@ export const Header = ({ title, subtitle, showBack = false, onBackPress, rightEl
 const styles = StyleSheet.create({
   blurWrap: {
     borderBottomWidth: 1,
+    shadowColor: 'rgba(23,59,58,0.08)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 2,
     overflow: 'hidden',
   },
   container: {

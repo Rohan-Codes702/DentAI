@@ -74,6 +74,13 @@ export const AppointmentHistory = ({ navigation }) => {
             appointment={item}
             userRole="patient"
             onCancel={() => handleCancel(item._id || item.id)}
+            onChat={() => navigation.navigate('ChatTab', {
+              screen: 'ChatScreen',
+              params: {
+                dentist: item.dentist,
+                targetUserId: item.dentist?._id || item.dentist?.id,
+              },
+            })}
           />
         )}
         ListEmptyComponent={

@@ -11,7 +11,41 @@ const logger = require('../utils/logger');
 // @access  Public
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, role, phone, otp } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      phone,
+      otp,
+      avatar,
+      pushToken,
+
+      // Dentist specific schema fields
+      dentistProfile,
+      specialization,
+      licenseNumber,
+      experienceYears,
+      clinicName,
+      clinicAddress,
+      bio,
+      availability,
+
+      // Patient specific schema fields
+      dateOfBirth,
+      gender,
+      address,
+      street,
+      city,
+      state,
+      zip,
+      medicalProfile,
+      bloodGroup,
+      allergies,
+      medicalHistory,
+      currentMedications,
+      emergencyContact,
+    } = req.body;
 
     if (!otp) {
       return res.status(400).json({ success: false, message: 'OTP is required' });
@@ -30,13 +64,55 @@ const register = async (req, res, next) => {
     // Delete used OTP
     await Otp.deleteMany({ email });
 
-    const user = await User.create({
+    const userData = {
       name,
       email,
       password,
       role: role || 'patient',
       phone,
-    });
+      ...(avatar && { avatar }),
+      ...(pushToken && { pushToken }),
+    };
+
+    if (role === 'dentist') {
+      userData.dentistProfile = {
+        specialization: dentistProfile?.specialization || specialization || 'General Dentist',
+        licenseNumber: dentistProfile?.licenseNumber || licenseNumber || '',
+        experienceYears: Number(dentistProfile?.experienceYears || experienceYears) || 0,
+        clinicName: dentistProfile?.clinicName || clinicName || '',
+        clinicAddress: dentistProfile?.clinicAddress || clinicAddress || '',
+        bio: dentistProfile?.bio || bio || '',
+        availability: dentistProfile?.availability || availability || [],
+        isVerified: true,
+      };
+    } else if (role === 'patient') {
+      if (dateOfBirth) userData.dateOfBirth = dateOfBirth;
+      if (gender) userData.gender = gender;
+
+      // Address mapping from direct string/object or individual fields
+      const formattedAddress = typeof address === 'object' ? address : {};
+      if (street) formattedAddress.street = street;
+      if (city) formattedAddress.city = city;
+      if (state) formattedAddress.state = state;
+      if (zip) formattedAddress.zip = zip;
+      if (Object.keys(formattedAddress).length > 0) {
+        userData.address = formattedAddress;
+      }
+
+      // Medical Profile mapping
+      const formattedMedicalProfile = typeof medicalProfile === 'object' ? medicalProfile : {};
+      if (bloodGroup) formattedMedicalProfile.bloodGroup = bloodGroup;
+      if (allergies) formattedMedicalProfile.allergies = Array.isArray(allergies) ? allergies : [allergies];
+      if (medicalHistory) formattedMedicalProfile.medicalHistory = Array.isArray(medicalHistory) ? medicalHistory : [medicalHistory];
+      if (currentMedications) formattedMedicalProfile.currentMedications = Array.isArray(currentMedications) ? currentMedications : [currentMedications];
+      if (emergencyContact) formattedMedicalProfile.emergencyContact = emergencyContact;
+
+      if (Object.keys(formattedMedicalProfile).length > 0) {
+        userData.medicalProfile = formattedMedicalProfile;
+      }
+    }
+
+    const user = await User.create(userData);
 
     const token = generateToken(user._id, user.role);
 

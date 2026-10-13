@@ -8,10 +8,12 @@ import { Button } from '../../components/Button';
 import { TIME_SLOTS } from '../../utils/constants';
 import { patientService } from '../../services/patientService';
 import { appointmentService } from '../../services/appointmentService';
+import { useTranslation } from 'react-i18next';
 
 export const BookAppointment = ({ route, navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
   const styles = createStyles(colors);
   const doctorParam = route?.params;
   const [dentists, setDentists] = useState([]);
@@ -40,12 +42,13 @@ export const BookAppointment = ({ route, navigation }) => {
     try {
       const res = await patientService.getNearbyDentists();
       const nextDentists = Array.isArray(res?.dentists) ? res.dentists : [];
-      setDentists(nextDentists);
+      setDentists(nextDentists.length > 0 ? nextDentists : doctorParam?.doctor ? [doctorParam.doctor] : []);
 
-      if (nextDentists.length > 0) {
+      if (nextDentists.length > 0 || doctorParam?.doctor) {
+        const availableDentists = nextDentists.length > 0 ? nextDentists : [doctorParam.doctor];
         if (doctorParam?.dentistId) {
-          const match = nextDentists.find(
-            (d) => d._id === doctorParam.dentistId || d.id === doctorParam.dentistId
+          const match = availableDentists.find(
+            (d) => String(d._id || d.id) === String(doctorParam.dentistId)
           );
           if (match) {
             setSelectedDentist(match);
@@ -53,7 +56,7 @@ export const BookAppointment = ({ route, navigation }) => {
             setDentists([doctorParam.doctor, ...nextDentists]);
             setSelectedDentist(doctorParam.doctor);
           } else {
-            setSelectedDentist(nextDentists[0]);
+            setSelectedDentist(null);
           }
         } else {
           setSelectedDentist(nextDentists[0]);
@@ -69,13 +72,14 @@ export const BookAppointment = ({ route, navigation }) => {
   };
 
   const fetchAvailability = async () => {
-    if (!selectedDentist?._id || !isValidIsoDate(date)) {
+    const selectedDentistId = selectedDentist?._id || selectedDentist?.id;
+    if (!selectedDentistId || !isValidIsoDate(date)) {
       setAvailableSlots(TIME_SLOTS);
       return;
     }
 
     try {
-      const res = await appointmentService.getAvailability(selectedDentist._id, date);
+      const res = await appointmentService.getAvailability(selectedDentistId, date);
       const slots = Array.isArray(res?.availableSlots) && res.availableSlots.length > 0
         ? res.availableSlots
         : [];
@@ -124,9 +128,9 @@ export const BookAppointment = ({ route, navigation }) => {
       <Header title="Book Appointment" showBack onBackPress={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>1. Select Dentist</Text>
+        <Text style={styles.sectionTitle}>{t('appointment.selectDentist')}</Text>
         {dentists.length === 0 ? (
-          <Text style={styles.emptyState}>No dentists are available right now.</Text>
+          <Text style={styles.emptyState}>{t('appointment.noDentists')}</Text>
         ) : null}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dentistRow}>
           {dentists.map((d, idx) => {
@@ -145,11 +149,11 @@ export const BookAppointment = ({ route, navigation }) => {
           })}
         </ScrollView>
 
-        <Text style={styles.sectionTitle}>2. Date & Reason</Text>
-        <Input label="Appointment Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
-        <Input label="Reason for Visit" value={reason} onChangeText={setReason} placeholder="Tooth pain, cleaning, etc." multiline />
+        <Text style={styles.sectionTitle}>{t('appointment.dateReason')}</Text>
+        <Input label={t('appointment.appointmentDate')} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+        <Input label={t('appointment.reasonForVisit')} value={reason} onChangeText={setReason} placeholder={t('appointment.reasonPlaceholder')} multiline />
 
-        <Text style={styles.sectionTitle}>3. Select Available Time Slot</Text>
+        <Text style={styles.sectionTitle}>{t('appointment.selectSlot')}</Text>
         <View style={styles.slotGrid}>
           {TIME_SLOTS.map((slot, idx) => {
             const isAvailable = availableSlots.includes(slot);
@@ -179,7 +183,7 @@ export const BookAppointment = ({ route, navigation }) => {
           })}
         </View>
 
-        <Button title="Confirm Appointment" onPress={handleBook} loading={loading} style={styles.bookBtn} />
+        <Button title={t('appointment.confirm')} onPress={handleBook} loading={loading} style={styles.bookBtn} />
       </ScrollView>
     </View>
     </KeyboardAvoidingView>

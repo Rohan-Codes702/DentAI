@@ -28,12 +28,27 @@ import { doctorService } from '../../services/doctorService';
 import { reportService } from '../../services/reportService';
 import { useTheme } from '../../hooks/useTheme';
 import { formatPatientAddress } from '../../utils/helpers';
+import { useTranslation } from 'react-i18next';
+
+const CONDITION_KEYS = {
+  filling: 'Filling',
+  crown: 'Crown',
+  caries: 'Caries',
+  'impacted tooth': 'Impacted Tooth',
+  'periapical lesion': 'Periapical Lesion',
+  calculus: 'Calculus',
+};
 
 const CONFIDENCE_THRESHOLD = 0.60; // 60%
 
 export const DiagnosisReview = ({ route, navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
+  const translateCondition = (value) => {
+    const key = CONDITION_KEYS[String(value || '').toLowerCase()] || value;
+    return t(`diseases.${key}`, { defaultValue: value });
+  };
 
   const [diagnosis, setDiagnosis] = useState(route?.params?.diagnosis || null);
   const [loadingDiagnosis, setLoadingDiagnosis] = useState(!route?.params?.diagnosis);
@@ -159,7 +174,7 @@ export const DiagnosisReview = ({ route, navigation }) => {
         <View style={styles.centerState}>
           <ScanLine size={36} color={colors.primary} />
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            Loading diagnosis...
+            {t('diagnosisReview.loading')}
           </Text>
         </View>
       </View>
@@ -173,7 +188,7 @@ export const DiagnosisReview = ({ route, navigation }) => {
         <View style={styles.centerState}>
           <AlertTriangle size={36} color={colors.warning} />
           <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>
-            Unable to load diagnosis
+            {t('diagnosisReview.loadError')}
           </Text>
           <Text style={[styles.stateText, { color: colors.textSecondary }]}>{loadError}</Text>
         </View>
@@ -190,9 +205,9 @@ export const DiagnosisReview = ({ route, navigation }) => {
         <LinearGradient colors={[colors.primary, colors.primaryDark]} style={styles.statusBanner}>
           <ScanLine size={20} color="#fff" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.statusTitle}>AI Analysis Completed</Text>
+            <Text style={styles.statusTitle}>{t('diagnosisReview.completed')}</Text>
             <Text style={styles.statusSub}>
-              {qualifyingDetections.length} finding{qualifyingDetections.length !== 1 ? 's' : ''} detected above 60% confidence threshold
+              {t('diagnosisReview.findingsDetected', { count: qualifyingDetections.length })}
             </Text>
           </View>
         </LinearGradient>
@@ -203,7 +218,7 @@ export const DiagnosisReview = ({ route, navigation }) => {
             <View style={styles.cardTitleRow}>
               <UserCircle2 size={18} color={colors.primary} />
               <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-                Patient Information
+                {t('diagnosisReview.patientInfo')}
               </Text>
             </View>
             <Text style={[styles.patientName, { color: colors.textPrimary }]}>
@@ -241,7 +256,7 @@ export const DiagnosisReview = ({ route, navigation }) => {
           <View style={styles.cardTitleRow}>
             <ScanLine size={18} color={colors.primary} />
             <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-              X-Ray Analysis
+              {t('diagnosisReview.xrayAnalysis')}
             </Text>
           </View>
 
@@ -255,7 +270,7 @@ export const DiagnosisReview = ({ route, navigation }) => {
             <View style={[styles.imagePlaceholder, { backgroundColor: colors.surfaceLight }]}>
               <ScanLine size={32} color={colors.primary} />
               <Text style={[styles.imagePlaceholderText, { color: colors.textMuted }]}>
-                No image available
+                {t('diagnosisReview.noImage')}
               </Text>
             </View>
           )}
@@ -272,14 +287,14 @@ export const DiagnosisReview = ({ route, navigation }) => {
 
           {/* Findings */}
           <Text style={[styles.findingsTitle, { color: colors.textSecondary }]}>
-            Detected Conditions (≥60% confidence):
+            {t('diagnosisReview.detected')}
           </Text>
 
           {qualifyingDetections.length === 0 ? (
             <View style={[styles.noFindings, { backgroundColor: colors.surfaceLight }]}>
               <CheckCircle2 size={20} color={colors.success} />
               <Text style={[styles.noFindingsText, { color: colors.textSecondary }]}>
-                No high-confidence detections found
+                {t('diagnosisReview.noFindings')}
               </Text>
             </View>
           ) : (
@@ -293,9 +308,9 @@ export const DiagnosisReview = ({ route, navigation }) => {
                 >
                   <View style={styles.detectionInfo}>
                     <Text style={[styles.detectionName, { color: colors.textPrimary }]}>
-                      {det.className || `Finding #${idx + 1}`}
+                      {translateCondition(det.className || `Finding #${idx + 1}`)}
                     </Text>
-                    <View style={[styles.confidenceBar, { backgroundColor: colors.surfaceLight }]}>
+                    <View style={[styles.confidenceBar, { backgroundColor: colors.surfaceLight }]}> 
                       <View
                         style={[
                           styles.confidenceFill,
@@ -304,7 +319,7 @@ export const DiagnosisReview = ({ route, navigation }) => {
                       />
                     </View>
                   </View>
-                  <View style={[styles.confBadge, { backgroundColor: `${barColor}18` }]}>
+                  <View style={[styles.confBadge, { backgroundColor: `${barColor}18` }]}> 
                     <Text style={[styles.confBadgeText, { color: barColor }]}>{pct}%</Text>
                   </View>
                 </View>
@@ -318,17 +333,17 @@ export const DiagnosisReview = ({ route, navigation }) => {
           <View style={styles.cardTitleRow}>
             <ClipboardList size={18} color={colors.primary} />
             <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-              Clinical Notes & Review
+              {t('diagnosisReview.clinicalNotes')}
             </Text>
           </View>
           <Text style={[styles.notesHint, { color: colors.textSecondary }]}>
-            Add your clinical assessment, treatment plan, and recommendations for the patient.
+            {t('diagnosisReview.notesHint')}
           </Text>
           <Input
-            label="Professional Recommendation / Treatment Plan"
+            label={t('diagnosisReview.recommendation')}
             value={notes}
             onChangeText={setNotes}
-            placeholder="e.g. Recommend composite resin filling for tooth #14. Periapical region to be monitored. Schedule follow-up in 4 weeks."
+            placeholder={t('ui.e.g. Recommend composite resin filling for tooth #14. Periapical region to be monitored. Schedule follow-up in 4 weeks.')}
             multiline
             numberOfLines={5}
           />
@@ -353,7 +368,7 @@ export const DiagnosisReview = ({ route, navigation }) => {
         <View style={[styles.disclaimer, { backgroundColor: colors.surfaceLight, borderColor: colors.border }]}>
           <ShieldAlert size={14} color={colors.textMuted} />
           <Text style={[styles.disclaimerText, { color: colors.textMuted }]}>
-            AI analysis is a preliminary decision-support tool (AI screening). It does not replace clinical examination. Only the dentist-approved findings will appear in the final patient report.
+            {t('diagnosisReview.disclaimer')}
           </Text>
         </View>
       </ScrollView>

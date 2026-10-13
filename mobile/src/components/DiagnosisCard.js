@@ -59,7 +59,7 @@ export const DiagnosisCard = ({ diagnosis, onPress }) => {
             ? conditions.map((c) => (typeof c === 'string' ? c : c.condition)).join(', ')
             : 'Awaiting AI analysis'}
         </Text>
-        <StatusBadge tone={conf.tone} label={conf.label} size="sm" />
+          <StatusBadge tone={conf.tone} label={conf.label} size="sm" />
       </View>
     </Card>
   );

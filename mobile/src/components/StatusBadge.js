@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 const STATUS_MAP = {
   confirmed: 'success',
@@ -25,6 +26,7 @@ const STATUS_MAP = {
 export const StatusBadge = ({ status, tone, label, size = 'md' }) => {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   const resolvedTone = tone || STATUS_MAP[String(status || '').toLowerCase()] || 'neutral';
 
@@ -36,7 +38,7 @@ export const StatusBadge = ({ status, tone, label, size = 'md' }) => {
     neutral: { fg: colors.textSecondary, bg: colors.surfaceLight },
   }[resolvedTone];
 
-  const text = label || (status ? status.replace(/_/g, ' ') : '');
+  const text = label || (status ? t(`status.${status}`, { defaultValue: status.replace(/_/g, ' ') }) : '');
   const isSmall = size === 'sm';
 
   return (
