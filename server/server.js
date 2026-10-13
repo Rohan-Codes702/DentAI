@@ -90,13 +90,18 @@ app.use(errorHandler);
 // ---------- Start ----------
 const PORT = process.env.PORT || 5000;
 
-const start = async () => {
-  await connectDB();
-  await seedDemoDentists();
-
-  server.listen(PORT, "0.0.0.0", () => {
+const start = () => {
+  server.listen(PORT, '0.0.0.0', async () => {
     logger.info(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     logger.info(`🔌 Socket.io ready for real-time chat`);
+
+    try {
+      await connectDB();
+      await seedDemoDentists();
+    } catch (error) {
+      logger.error('Server startup initialization failed:', error);
+      process.exit(1);
+    }
   });
 };
 
