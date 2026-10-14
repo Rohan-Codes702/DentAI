@@ -13,8 +13,8 @@ load_dotenv()
 # Or override with an env var (useful for Docker / deployment)
 MODEL_PATH = os.getenv("MODEL_PATH", "app/weights/best.pt")
 
-# Image size the model was trained on (YOLOv8 default is 640)
-IMG_SIZE = int(os.getenv("IMG_SIZE", 320))
+# Image size used for YOLOv8 inference (YOLOv8 default is 640)
+IMG_SIZE = int(os.getenv("IMG_SIZE", 640))
 
 # Minimum confidence to keep a detection (tune based on validation results)
 CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", 0.70))
