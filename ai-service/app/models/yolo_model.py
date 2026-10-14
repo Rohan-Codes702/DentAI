@@ -1,9 +1,11 @@
+
 """
 YOLOv8 model wrapper.
-Loads best.pt ONCE at startup (not per-request) and exposes a
-simple `predict()` method used by the /predict route.
+Loads best.pt once at startup and runs memory-conscious inference.
 """
 import logging
+import gc
+
 from ultralytics import YOLO
 
 from app.config import (
@@ -30,33 +32,49 @@ class DentalYOLOModel:
         return cls._instance
 
     def _load(self):
-        logger.info(f"Loading YOLOv8 model from {MODEL_PATH} on device={DEVICE}")
+        logger.info("Loading YOLOv8 model from %s on CPU", MODEL_PATH)
+
+        # Explicit CPU inference; avoid GPU-specific memory usage.
         self.model = YOLO(MODEL_PATH)
-        self.model.to(DEVICE)
+        self.model.to("cpu")
+
         logger.info("Model loaded successfully.")
-        logger.info(f"Model class names: {self.model.names}")
+        logger.info("Model class names: %s", self.model.names)
 
     def predict(self, image_path: str):
         """
-        Run inference on a single image.
-
-        Returns the raw ultralytics Results object (first element,
-        since we only pass one image at a time).
+        Run inference on one image and return its Results object.
+        A smaller image size may reduce memory use but can affect accuracy.
         """
-        results = self.model.predict(
-            source=image_path,
-            imgsz=IMG_SIZE,
-            conf=CONF_THRESHOLD,
-            iou=IOU_THRESHOLD,
-            device=DEVICE,
-            verbose=False,
-        )
-        return results[0]
+        results = None
+        try:
+            results = self.model.predict(
+                source=image_path,
+                imgsz=320,
+                conf=CONF_THRESHOLD,
+                iou=IOU_THRESHOLD,
+                device="cpu",
+                verbose=False,
+                half=False,
+                stream=False,
+                max_det=100,
+                save=False,
+            )
+
+            if not results:
+                raise RuntimeError("YOLO returned no prediction results.")
+
+            return results[0]
+
+        finally:
+            # Release the list reference after inference.
+            # The returned Results object remains available to the caller.
+            del results
+            gc.collect()
 
     def parse_detections(self, result):
         """
-        Convert ultralytics Results into a clean list of dicts:
-        [{class_id, class_name, confidence, bbox: [x1,y1,x2,y2]}, ...]
+        Convert YOLO results into the existing detection response format.
         """
         detections = []
         boxes = result.boxes
@@ -66,28 +84,35 @@ class DentalYOLOModel:
 
         for box in boxes:
             cls_id = int(box.cls[0].item())
-            conf = float(box.conf[0].item())
-            x1, y1, x2, y2 = [float(v) for v in box.xyxy[0].tolist()]
+            confidence = float(box.conf[0].item())
+            x1, y1, x2, y2 = [
+                float(value) for value in box.xyxy[0].tolist()
+            ]
 
-            det = {
+            class_name = CLASS_NAMES.get(
+                cls_id, f"class_{cls_id}"
+            )
+
+            detections.append({
                 "classId": cls_id,
                 "class_id": cls_id,
-                "className": CLASS_NAMES.get(cls_id, f"class_{cls_id}"),
-                "class_name": CLASS_NAMES.get(cls_id, f"class_{cls_id}"),
-                "confidence": round(conf, 4),
+                "className": class_name,
+                "class_name": class_name,
+                "confidence": round(confidence, 4),
                 "bbox": {
                     "x1": round(x1, 2),
                     "y1": round(y1, 2),
                     "x2": round(x2, 2),
                     "y2": round(y2, 2),
                 },
-            }
-            detections.append(det)
+            })
 
-        # Sort by confidence, highest first
-        detections.sort(key=lambda d: d["confidence"], reverse=True)
+        detections.sort(
+            key=lambda item: item["confidence"],
+            reverse=True,
+        )
         return detections
 
 
-# Module-level singleton — imported by routes so the model loads only once
+# Load the model once when the application starts.
 dental_model = DentalYOLOModel()

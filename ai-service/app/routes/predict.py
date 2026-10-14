@@ -63,7 +63,12 @@ async def predict(
 
         # --- Run inference ---
         logger.info(f"Running inference on {temp_path}")
-        result = dental_model.predict(temp_path)
+        result = dental_model.predict(
+            temp_path,
+            imgsz=320,
+            device="cpu",
+            verbose=False,
+        )
         detections = dental_model.parse_detections(result)
 
         # --- Annotate image ---
