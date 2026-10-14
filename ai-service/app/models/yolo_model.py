@@ -40,6 +40,7 @@ class DentalYOLOModel:
 
         logger.info("Model loaded successfully.")
         logger.info("Model class names: %s", self.model.names)
+        logger.info("Inference image size: %s", IMG_SIZE)
 
     def predict(self, image_path: str):
         """Run inference on one image and return its Results object."""
