@@ -40,7 +40,8 @@ async def predict(
     verify_api_key(x_api_key)
 
     # --- Validate file type ---
-    ext = os.path.splitext(file.filename)[1].lower()
+    filename = file.filename or ""
+    ext = os.path.splitext(filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
@@ -62,13 +63,8 @@ async def predict(
             raise HTTPException(status_code=400, detail="File too large (max 15MB)")
 
         # --- Run inference ---
-        logger.info(f"Running inference on {temp_path}")
-        result = dental_model.predict(
-            temp_path,
-            imgsz=320,
-            device="cpu",
-            verbose=False,
-        )
+        logger.info("Running inference on %s", temp_path)
+        result = dental_model.predict(temp_path)
         detections = dental_model.parse_detections(result)
 
         # --- Annotate image ---
@@ -89,13 +85,20 @@ async def predict(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Prediction failed")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Prediction failed. Check the AI service logs for details.",
+        )
     finally:
         # Clean up the original temp upload (keep only the annotated result)
         if os.path.exists(temp_path):
-            os.remove(temp_path)
+            try:
+                os.remove(temp_path)
+            except OSError:
+                logger.warning("Could not remove temporary upload %s", temp_path)
+        await file.close()
 
 
 @router.get("/health")
