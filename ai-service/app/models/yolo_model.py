@@ -3,8 +3,9 @@
 YOLOv8 model wrapper.
 Loads best.pt once at startup and runs memory-conscious inference.
 """
-import logging
+
 import gc
+import logging
 
 from ultralytics import YOLO
 
@@ -13,7 +14,6 @@ from app.config import (
     IMG_SIZE,
     CONF_THRESHOLD,
     IOU_THRESHOLD,
-    DEVICE,
     CLASS_NAMES,
 )
 
@@ -32,9 +32,9 @@ class DentalYOLOModel:
         return cls._instance
 
     def _load(self):
-        logger.info("Loading YOLOv8 model from %s on CPU", MODEL_PATH)
+        """Load the trained dental model once on CPU."""
+        logger.info("Loading YOLOv8 model from %s", MODEL_PATH)
 
-        # Explicit CPU inference; avoid GPU-specific memory usage.
         self.model = YOLO(MODEL_PATH)
         self.model.to("cpu")
 
@@ -42,15 +42,13 @@ class DentalYOLOModel:
         logger.info("Model class names: %s", self.model.names)
 
     def predict(self, image_path: str):
-        """
-        Run inference on one image and return its Results object.
-        A smaller image size may reduce memory use but can affect accuracy.
-        """
+        """Run inference on one image and return its Results object."""
         results = None
+
         try:
             results = self.model.predict(
                 source=image_path,
-                imgsz=320,
+                imgsz=IMG_SIZE,
                 conf=CONF_THRESHOLD,
                 iou=IOU_THRESHOLD,
                 device="cpu",
@@ -61,21 +59,18 @@ class DentalYOLOModel:
                 save=False,
             )
 
-            if not results:
+            if results is None or len(results) == 0:
                 raise RuntimeError("YOLO returned no prediction results.")
 
             return results[0]
 
         finally:
-            # Release the list reference after inference.
             # The returned Results object remains available to the caller.
             del results
             gc.collect()
 
     def parse_detections(self, result):
-        """
-        Convert YOLO results into the existing detection response format.
-        """
+        """Convert YOLO results into the existing API response format."""
         detections = []
         boxes = result.boxes
 
@@ -85,13 +80,12 @@ class DentalYOLOModel:
         for box in boxes:
             cls_id = int(box.cls[0].item())
             confidence = float(box.conf[0].item())
+
             x1, y1, x2, y2 = [
                 float(value) for value in box.xyxy[0].tolist()
             ]
 
-            class_name = CLASS_NAMES.get(
-                cls_id, f"class_{cls_id}"
-            )
+            class_name = CLASS_NAMES.get(cls_id, f"class_{cls_id}")
 
             detections.append({
                 "classId": cls_id,
@@ -111,6 +105,7 @@ class DentalYOLOModel:
             key=lambda item: item["confidence"],
             reverse=True,
         )
+
         return detections
 
 
