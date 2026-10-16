@@ -36,6 +36,10 @@ const io = new Server(server, {
 app.set('io', io);
 initChatSocket(io);
 
+
+app.set('trust proxy', 1);
+
+
 // ---------- Core middleware ----------
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*', credentials: true }));
