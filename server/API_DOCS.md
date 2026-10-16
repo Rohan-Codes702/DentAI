@@ -28,13 +28,6 @@ Public. Creates a patient or dentist account.
 }
 ```
 **201** → `{ success, token, user }`
-Email verification is disabled. The legacy `otp` field may still be sent by older clients,
-but it is ignored and is not required. Email ownership is not verified during registration.
-
-### POST `/auth/send-otp`
-Legacy compatibility endpoint for existing mobile clients. The endpoint validates the email
-and rejects already-registered addresses, but does not send or require an OTP.
-**200** → `{ success: true, message: "Email verification is disabled" }`
 
 ### POST `/auth/login`
 Public.

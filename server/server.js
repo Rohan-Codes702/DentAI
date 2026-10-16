@@ -36,9 +36,8 @@ const io = new Server(server, {
 app.set('io', io);
 initChatSocket(io);
 
-
+// Render adds one trusted reverse-proxy hop and forwards the client IP.
 app.set('trust proxy', 1);
-
 
 // ---------- Core middleware ----------
 app.use(helmet());
