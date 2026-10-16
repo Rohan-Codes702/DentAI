@@ -282,19 +282,37 @@ const appleLogin = async (req, res, next) => {
 // @desc    Send OTP to email for verification
 // @route   POST /api/auth/send-otp
 // @access  Public
+
 const sendOtp = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const email = req.body.email?.trim().toLowerCase();
 
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(409).json({ success: false, message: 'Email already registered' });
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
     }
 
-    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const existing = await User.findOne({ email });
+
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email already registered',
+      });
+    }
+
+    const otpCode = Math.floor(
+      1000 + Math.random() * 9000
+    ).toString();
 
     await Otp.deleteMany({ email });
-    await Otp.create({ email, otp: otpCode });
+
+    const savedOtp = await Otp.create({
+      email,
+      otp: otpCode,
+    });
 
     try {
       await sendEmail({
@@ -302,16 +320,26 @@ const sendOtp = async (req, res, next) => {
         subject: 'DentAI - Verify your email address',
         html: templates.otpVerification(otpCode),
       });
-      res.status(200).json({ success: true, message: 'OTP sent successfully' });
-    } catch (e) {
-      logger.warn('OTP email failed:', e.message);
-      console.log(`[DEV ONLY] OTP for ${email} is ${otpCode}`);
-      res.status(200).json({ success: true, message: 'OTP sent (check server logs if email failed)' });
+
+      return res.status(200).json({
+        success: true,
+        message: 'OTP sent successfully',
+      });
+    } catch (emailError) {
+      logger.error('OTP email failed:', emailError.message);
+
+      await Otp.deleteOne({ _id: savedOtp._id }).catch(() => {});
+
+      return res.status(502).json({
+        success: false,
+        message: 'Unable to send OTP email. Please try again later.',
+      });
     }
   } catch (error) {
     next(error);
   }
 };
+
 
 // @desc    Upload / update profile avatar
 // @route   PUT /api/auth/upload-avatar
