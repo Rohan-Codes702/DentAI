@@ -1,6 +1,5 @@
 const fs = require('fs');
 const User = require('../models/User');
-const Otp = require('../models/Otp');
 const generateToken = require('../utils/generateToken');
 const { sendEmail, templates } = require('../utils/sendEmail');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
@@ -13,11 +12,10 @@ const register = async (req, res, next) => {
   try {
     const {
       name,
-      email,
+      email: rawEmail,
       password,
       role,
       phone,
-      otp,
       avatar,
       pushToken,
 
@@ -47,22 +45,12 @@ const register = async (req, res, next) => {
       emergencyContact,
     } = req.body;
 
-    if (!otp) {
-      return res.status(400).json({ success: false, message: 'OTP is required' });
-    }
-
-    const validOtp = await Otp.findOne({ email, otp });
-    if (!validOtp) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
-    }
+    const email = rawEmail.trim().toLowerCase();
 
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(409).json({ success: false, message: 'Email already registered' });
     }
-
-    // Delete used OTP
-    await Otp.deleteMany({ email });
 
     const userData = {
       name,
@@ -279,7 +267,7 @@ const appleLogin = async (req, res, next) => {
   }
 };
 
-// @desc    Send OTP to email for verification
+// @desc    Legacy registration compatibility endpoint
 // @route   POST /api/auth/send-otp
 // @access  Public
 
@@ -303,38 +291,10 @@ const sendOtp = async (req, res, next) => {
       });
     }
 
-    const otpCode = Math.floor(
-      1000 + Math.random() * 9000
-    ).toString();
-
-    await Otp.deleteMany({ email });
-
-    const savedOtp = await Otp.create({
-      email,
-      otp: otpCode,
+    return res.status(200).json({
+      success: true,
+      message: 'Email verification is disabled',
     });
-
-    try {
-      await sendEmail({
-        to: email,
-        subject: 'DentAI - Verify your email address',
-        html: templates.otpVerification(otpCode),
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: 'OTP sent successfully',
-      });
-    } catch (emailError) {
-      logger.error('OTP email failed:', emailError.message);
-
-      await Otp.deleteOne({ _id: savedOtp._id }).catch(() => {});
-
-      return res.status(502).json({
-        success: false,
-        message: 'Unable to send OTP email. Please try again later.',
-      });
-    }
   } catch (error) {
     next(error);
   }
