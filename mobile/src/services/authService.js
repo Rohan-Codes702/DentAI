@@ -14,9 +14,6 @@ export const authService = {
   appleLogin: async (data) => {
     return await post('/auth/apple', data);
   },
-  sendOtp: async (email) => {
-    return await post('/auth/send-otp', { email });
-  },
   getCurrentUser: async () => {
     return await get('/auth/me');
   },

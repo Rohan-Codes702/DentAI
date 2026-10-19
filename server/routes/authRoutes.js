@@ -8,7 +8,6 @@ const {
   logout,
   googleLogin,
   appleLogin,
-  sendOtp,
   uploadAvatar,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
@@ -74,15 +73,6 @@ router.post(
   ],
   validate,
   appleLogin
-);
-
-router.post(
-  '/send-otp',
-  [
-    body('email').isEmail().withMessage('Valid email is required'),
-  ],
-  validate,
-  sendOtp
 );
 
 module.exports = router;

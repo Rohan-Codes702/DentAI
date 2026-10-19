@@ -13,7 +13,7 @@ import { validateEmail, validatePassword, validatePhone } from '../../utils/vali
 import { ROLES } from '../../utils/constants';
 
 export const RegisterScreen = ({ navigation }) => {
-  const { register, sendOtp, updateAvatar } = useAuth();
+  const { register, updateAvatar } = useAuth();
   const { theme } = useTheme();
   const { colors } = theme;
   const toast = useToast();
@@ -22,7 +22,6 @@ export const RegisterScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState(ROLES.PATIENT);
-  const [otpCode, setOtpCode] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -123,25 +122,11 @@ export const RegisterScreen = ({ navigation }) => {
       }
       setErrors({});
 
-      setLoading(true);
-      const result = await sendOtp(email);
-      setLoading(false);
-
-      if (result.success) {
-        toast.success('OTP Sent', 'Check your email for the verification code.');
-        setStep(3);
-      } else {
-        toast.error('Failed to send OTP', result.message || 'Please try again.');
-      }
+      await handleRegister();
     }
   };
 
   const handleRegister = async () => {
-    if (!otpCode || otpCode.length < 4) {
-      toast.error('Verification Required', 'Please enter the 4-digit OTP.');
-      return;
-    }
-
     setLoading(true);
     const registerPayload = {
       name,
@@ -149,7 +134,6 @@ export const RegisterScreen = ({ navigation }) => {
       password,
       role,
       phone,
-      otp: otpCode,
     };
 
     if (role === ROLES.DENTIST) {
@@ -211,7 +195,7 @@ export const RegisterScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.stepper}>
-        {[1, 2, 3].map((item) => (
+        {[1, 2].map((item) => (
           <View key={item} style={[styles.stepDot, { backgroundColor: step >= item ? colors.primary : colors.surfaceLight }]}>
             <Text style={styles.stepDotText}>{item}</Text>
           </View>
@@ -426,20 +410,6 @@ export const RegisterScreen = ({ navigation }) => {
           </>
         )}
 
-        {step >= 3 && (
-          <View style={styles.otpCard}>
-            <Text style={[styles.otpTitle, { color: colors.textPrimary }]}>Verify Email Code</Text>
-            <Text style={[styles.otpText, { color: colors.textSecondary }]}>Enter the 4-digit verification code sent to your email to confirm your account.</Text>
-            <Input
-              label="Verification Code"
-              value={otpCode}
-              onChangeText={setOtpCode}
-              placeholder="1234"
-              keyboardType="number-pad"
-            />
-          </View>
-        )}
-
         <View style={styles.stepActions}>
           {step > 1 ? (
             <Button title="Back" variant="outline" onPress={() => setStep((current) => current - 1)} style={styles.stepBtn} />
@@ -447,7 +417,7 @@ export const RegisterScreen = ({ navigation }) => {
             <View style={styles.stepBtn} />
           )}
 
-          {step < 3 ? (
+          {step < 2 ? (
             <Button title="Continue" onPress={handleContinue} loading={loading} style={styles.stepBtn} />
           ) : (
             <Button title="Create Account" onPress={handleRegister} loading={loading} style={styles.stepBtn} />
@@ -610,24 +580,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginTop: 8,
-  },
-  otpCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#D8EAE6',
-    padding: 16,
-    marginTop: 8,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-  },
-  otpTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  otpText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-    marginBottom: 10,
   },
   stepper: {
     flexDirection: 'row',

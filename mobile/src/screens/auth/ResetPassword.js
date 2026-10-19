@@ -15,15 +15,10 @@ export const ResetPassword = ({ route, navigation }) => {
   const { theme } = useTheme();
   const { colors } = theme;
   const toast = useToast();
-  const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleReset = () => {
-    if (!code || code.length < 4) {
-      toast.error('Verification required', 'Please enter the 4-digit code sent to your email.');
-      return;
-    }
     if (!validatePassword(newPassword)) {
       toast.error('Weak password', 'New password must be at least 6 characters.');
       return;
@@ -47,16 +42,8 @@ export const ResetPassword = ({ route, navigation }) => {
           <View style={[styles.iconWrap, { backgroundColor: colors.successSoft }]}>
             <LockKeyhole size={22} color={colors.success} />
           </View>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Enter verification code</Text>
-          <Text style={[styles.desc, { color: colors.textSecondary }]}>We have sent a verification code to {email}</Text>
-
-          <Input
-            label="4-Digit Code"
-            value={code}
-            onChangeText={setCode}
-            placeholder="1234"
-            keyboardType="number-pad"
-          />
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Set a new password</Text>
+          <Text style={[styles.desc, { color: colors.textSecondary }]}>Choose a new password for {email}</Text>
 
           <Input
             label="New Password"

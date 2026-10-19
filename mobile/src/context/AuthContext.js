@@ -109,18 +109,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const sendOtp = async (email) => {
-    dispatch(setLoading(true));
-    try {
-      const res = await authService.sendOtp(email);
-      dispatch(setLoading(false));
-      return { success: true, message: res?.message || 'OTP sent' };
-    } catch (err) {
-      dispatch(setLoading(false));
-      return { success: false, message: err.message };
-    }
-  };
-
   const logout = async () => {
     try {
       await authService.logout();
@@ -155,7 +143,6 @@ export const AuthProvider = ({ children }) => {
         login,
         googleLogin,
         appleLogin,
-        sendOtp,
         register,
         logout,
         updateAvatar,
