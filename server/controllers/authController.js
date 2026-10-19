@@ -289,6 +289,9 @@ const appleLogin = async (req, res, next) => {
 // @access  Public
 
 const sendOtp = async (req, res, next) => {
+  const startedAt = Date.now();
+  logger.info('OTP request started');
+
   try {
     const email = req.body.email?.trim().toLowerCase();
 
@@ -333,7 +336,11 @@ const sendOtp = async (req, res, next) => {
     } catch (emailError) {
       logger.error('OTP email failed:', emailError.message);
 
-      await Otp.deleteOne({ _id: savedOtp._id }).catch(() => {});
+      try {
+        await Otp.deleteOne({ _id: savedOtp._id });
+      } catch (cleanupError) {
+        logger.error('Failed to clean up OTP after email failure:', cleanupError.message);
+      }
 
       return res.status(502).json({
         success: false,
@@ -342,6 +349,8 @@ const sendOtp = async (req, res, next) => {
     }
   } catch (error) {
     next(error);
+  } finally {
+    logger.info(`OTP request completed in ${Date.now() - startedAt}ms`);
   }
 };
 

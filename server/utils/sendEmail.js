@@ -1,31 +1,66 @@
-const nodemailer = require('nodemailer');
+const fs = require('fs');
+const { Resend } = require('resend');
 const logger = require('./logger');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS || process.env.EMAIL_APP_PASSWORD,
-  },
-});
+const RESEND_TIMEOUT_MS = 18_000;
+
+const getAttachments = (attachments) =>
+  attachments?.map((attachment) => {
+    if (attachment.content || !attachment.path) {
+      return attachment;
+    }
+
+    return {
+      ...attachment,
+      content: fs.readFileSync(attachment.path),
+      path: undefined,
+    };
+  });
 
 /**
  * Generic send function
  */
 const sendEmail = async ({ to, subject, html, attachments }) => {
+  const startedAt = Date.now();
+  logger.info('Email API request started');
+
   try {
-    const info = await transporter.sendMail({
-      from: `"DentAI" <${process.env.EMAIL_USER}>`,
+    if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+      throw new Error('Email provider configuration is missing');
+    }
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const signal = AbortSignal.timeout(RESEND_TIMEOUT_MS);
+    logger.info('Resend email API request started');
+    const result = await resend.emails.send({
+      from: process.env.EMAIL_FROM,
       to,
       subject,
       html,
-      attachments, // [{ filename, path }] or [{ filename, content }]
-    });
-    logger.info(`Email sent to ${to}: ${info.messageId}`);
-    return info;
+      attachments: getAttachments(attachments),
+    }, { signal });
+
+    if (result.error) {
+      const providerMessage =
+        result.error.message || result.error.name || 'Unknown provider error';
+      const providerError = new Error(`Email provider request failed: ${providerMessage}`);
+      providerError.statusCode = result.error.statusCode;
+      throw providerError;
+    }
+
+    if (!result.data?.id) {
+      throw new Error('Email provider returned no accepted message ID');
+    }
+
+    logger.info(`Resend email API request succeeded: ${result.data.id}`);
+    return result.data;
   } catch (error) {
-    logger.error('Email send failed:', error.message);
+    const message = error instanceof Error ? error.message : String(error);
+    const statusCode = error?.statusCode ? ` (status ${error.statusCode})` : '';
+    logger.error(`Resend email API request failed${statusCode}:`, message);
     throw error;
+  } finally {
+    logger.info(`Email API request completed in ${Date.now() - startedAt}ms`);
   }
 };
 

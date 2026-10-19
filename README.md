@@ -160,7 +160,7 @@ DentAI follows a **multi-service architecture** consisting of three major compon
 * Socket.IO
 * Multer
 * PDFKit
-* Nodemailer
+* Resend
 
 ---
 
@@ -482,10 +482,8 @@ AI_SERVICE_URL=http://localhost:8000
 
 CLIENT_URL=your_mobile_or_client_url
 
-SMTP_HOST=your_smtp_host
-SMTP_PORT=your_smtp_port
-SMTP_USER=your_email
-SMTP_PASSWORD=your_email_password
+RESEND_API_KEY=your_resend_api_key
+EMAIL_FROM="DentAI <noreply@your-domain.com>"
 ```
 
 ## Mobile
@@ -965,5 +963,4 @@ If you find DentAI useful or interesting, consider giving the repository a ⭐ o
 ## 📄 License
 
 This project is currently intended for educational and development purposes.
-
 
