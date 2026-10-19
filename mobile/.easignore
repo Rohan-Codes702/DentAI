@@ -1,12 +1,26 @@
+
 node_modules/
 .expo/
 .expo-check/
 dist/
+build/
+web-build/
 .git/
+
+# Generated Android build files
 android/.gradle/
+android/build/
 android/app/build/
+android/.cxx/
+android/app/.cxx/
+
+# Large model and archive files not required by the mobile build
 *.pt
 *.onnx
 *.pth
 *.h5
 *.zip
+
+# Logs and test output
+*.log
+coverage/
