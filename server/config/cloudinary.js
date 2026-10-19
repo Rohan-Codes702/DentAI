@@ -9,17 +9,22 @@ cloudinary.config({
 /**
  * Upload an image to Cloudinary
  */
-const uploadToCloudinary = async (
-  filePath,
-  folder = 'dentai/misc'
-) => {
+const uploadToCloudinary = async (filePath, folder = 'dentai/misc', options = {}) => {
   const result = await cloudinary.uploader.upload(filePath, {
     folder,
     resource_type: 'image',
+    type: options.type || 'upload',
   });
 
   return {
-    url: result.secure_url,
+    url: options.type === 'authenticated'
+      ? cloudinary.url(result.public_id, {
+          resource_type: 'image',
+          type: 'authenticated',
+          sign_url: true,
+          secure: true,
+        })
+      : result.secure_url,
     publicId: result.public_id,
   };
 };
@@ -29,17 +34,25 @@ const uploadToCloudinary = async (
  */
 const uploadRawToCloudinary = async (
   filePath,
-  folder = 'dentai/reports'
+  folder = 'dentai/reports',
+  options = {}
 ) => {
   const result = await cloudinary.uploader.upload(filePath, {
     folder,
     resource_type: 'raw',
-    type: 'upload',
-    access_mode: 'public',
+    type: options.type || 'upload',
+    ...(options.type === 'authenticated' ? {} : { access_mode: 'public' }),
   });
 
   return {
-    url: result.secure_url,
+    url: options.type === 'authenticated'
+      ? cloudinary.url(result.public_id, {
+          resource_type: 'raw',
+          type: 'authenticated',
+          sign_url: true,
+          secure: true,
+        })
+      : result.secure_url,
     publicId: result.public_id,
   };
 };

@@ -48,6 +48,29 @@ const uploadXrayAndAnalyze = async (req, res, next) => {
       });
     }
 
+    const appointment = appointmentId
+      ? await Appointment.findOne({
+          _id: appointmentId,
+          patient: patientId,
+          $or: [
+            { doctorId: req.user._id },
+            { doctorId: { $exists: false }, dentist: req.user._id },
+          ],
+        })
+      : null;
+    if (appointmentId && !appointment) {
+      return res.status(403).json({ success: false, message: 'Appointment is not assigned to this dentist and patient' });
+    }
+    if (!appointmentId && !(await Appointment.exists({
+      patient: patientId,
+      $or: [
+        { doctorId: req.user._id },
+        { doctorId: { $exists: false }, dentist: req.user._id },
+      ],
+    }))) {
+      return res.status(403).json({ success: false, message: 'Patient is not connected to this dentist' });
+    }
+
     // ---------------------------------------------------------
     // 2. Log what the server actually received
     // ---------------------------------------------------------
@@ -238,8 +261,14 @@ const uploadXrayAndAnalyze = async (req, res, next) => {
     // 11. Mark appointment completed
     // ---------------------------------------------------------
     if (appointmentId) {
-      await Appointment.findByIdAndUpdate(
-        appointmentId,
+      await Appointment.findOneAndUpdate(
+        {
+          _id: appointmentId,
+          $or: [
+            { doctorId: req.user._id },
+            { doctorId: { $exists: false }, dentist: req.user._id },
+          ],
+        },
         {
           status: 'completed',
         }

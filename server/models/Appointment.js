@@ -12,6 +12,11 @@ const appointmentSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    // Canonical doctor ownership field. `dentist` is retained for legacy records.
+    doctorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
     date: {
       type: Date,
       required: [true, 'Appointment date is required'],
@@ -60,6 +65,7 @@ const appointmentSchema = new mongoose.Schema(
 );
 
 appointmentSchema.index({ dentist: 1, date: 1 });
+appointmentSchema.index({ doctorId: 1, date: 1 });
 appointmentSchema.index({ patient: 1, date: -1 });
 
 module.exports = mongoose.model('Appointment', appointmentSchema);

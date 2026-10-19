@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Appointment = require('../models/Appointment');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 const fs = require('fs');
 
@@ -119,7 +120,11 @@ const listDentists = async (req, res, next) => {
 const listPatients = async (req, res, next) => {
   try {
     const { search } = req.query;
-    const query = { role: 'patient', isActive: true };
+    const appointmentFilter = {
+      $or: [{ doctorId: req.user._id }, { doctorId: { $exists: false }, dentist: req.user._id }],
+    };
+    const patientIds = await Appointment.distinct('patient', appointmentFilter);
+    const query = { _id: { $in: patientIds }, role: 'patient', isActive: true };
 
     if (search) {
       query.name = { $regex: search, $options: 'i' };

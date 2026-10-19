@@ -14,8 +14,6 @@ const storage = multer.diskStorage({
 });
 
 const IMAGE_TYPES = /jpeg|jpg|png|webp/;
-const DOC_TYPES = /pdf|jpeg|jpg|png/;
-
 const imageFileFilter = (req, file, cb) => {
   const extOk = IMAGE_TYPES.test(path.extname(file.originalname).toLowerCase());
   const mimeOk = IMAGE_TYPES.test(file.mimetype);
@@ -24,10 +22,10 @@ const imageFileFilter = (req, file, cb) => {
 };
 
 const docFileFilter = (req, file, cb) => {
-  const extOk = DOC_TYPES.test(path.extname(file.originalname).toLowerCase());
-  const mimeOk = DOC_TYPES.test(file.mimetype);
+  const extOk = /\.(pdf|jpe?g|png)$/i.test(file.originalname);
+  const mimeOk = ['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimetype);
   if (extOk && mimeOk) return cb(null, true);
-  cb(new Error('Only pdf/jpg/png files are allowed'));
+  cb(new Error('Only PDF, JPG, JPEG, and PNG files are allowed'));
 };
 
 const uploadXray = multer({

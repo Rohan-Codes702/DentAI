@@ -3,6 +3,16 @@ const User = require('../models/User');
 const { sendEmail, templates } = require('../utils/sendEmail');
 const logger = require('../utils/logger');
 
+const doctorAppointmentFilter = (doctorId) => ({
+  $or: [{ doctorId }, { doctorId: { $exists: false }, dentist: doctorId }],
+});
+
+const appointmentAccessFilter = (user, appointmentId) => {
+  if (user.role === 'admin') return { _id: appointmentId };
+  if (user.role === 'dentist') return { _id: appointmentId, ...doctorAppointmentFilter(user._id) };
+  return { _id: appointmentId, patient: user._id };
+};
+
 // @desc    Book an appointment
 // @route   POST /api/appointments
 // @access  Private (patient)
@@ -29,6 +39,7 @@ const bookAppointment = async (req, res, next) => {
     const appointment = await Appointment.create({
       patient: req.user._id,
       dentist: dentistId,
+      doctorId: dentistId,
       date,
       timeSlot,
       reason,
@@ -54,7 +65,9 @@ const getMyAppointments = async (req, res, next) => {
   try {
     const { status } = req.query;
     const filter =
-      req.user.role === 'dentist' ? { dentist: req.user._id } : { patient: req.user._id };
+      req.user.role === 'dentist'
+        ? doctorAppointmentFilter(req.user._id)
+        : { patient: req.user._id };
 
     if (status) filter.status = status;
 
@@ -74,18 +87,12 @@ const getMyAppointments = async (req, res, next) => {
 // @access  Private
 const getAppointment = async (req, res, next) => {
   try {
-    const appointment = await Appointment.findById(req.params.id)
+    const appointment = await Appointment.findOne(appointmentAccessFilter(req.user, req.params.id))
       .populate('patient', 'name email phone avatar medicalProfile')
       .populate('dentist', 'name email phone avatar dentistProfile');
 
     if (!appointment) {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
-    }
-
-    const isOwner =
-      appointment.patient._id.equals(req.user._id) || appointment.dentist._id.equals(req.user._id);
-    if (!isOwner && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Not authorized to view this appointment' });
     }
 
     res.status(200).json({ success: true, appointment });
@@ -106,15 +113,9 @@ const updateStatus = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
-    const appointment = await Appointment.findById(req.params.id);
+    const appointment = await Appointment.findOne(appointmentAccessFilter(req.user, req.params.id));
     if (!appointment) {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
-    }
-
-    const isOwner =
-      appointment.patient.equals(req.user._id) || appointment.dentist.equals(req.user._id);
-    if (!isOwner) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     appointment.status = status;

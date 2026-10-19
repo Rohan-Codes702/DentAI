@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   Image,
+  Linking,
 } from 'react-native';
 import { Send, Phone, Video } from 'lucide-react-native';
 import { Header } from '../../components/Header';
@@ -19,6 +20,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { chatService } from '../../services/chatService';
 import { getInitials } from '../../utils/helpers';
+import { chooseChatAttachment } from '../../utils/chatAttachments';
 
 export const ChatScreen = ({ route, navigation }) => {
   const { user } = useAuth();
@@ -33,6 +35,9 @@ export const ChatScreen = ({ route, navigation }) => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedAttachment, setSelectedAttachment] = useState(null);
   const flatListRef = useRef(null);
   const typingTimeout = useRef(null);
 
@@ -138,6 +143,7 @@ export const ChatScreen = ({ route, navigation }) => {
       createdAt: new Date().toISOString(),
       read: false,
     };
+
     setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
@@ -176,9 +182,43 @@ export const ChatScreen = ({ route, navigation }) => {
     }
   };
 
+  const handlePickAttachment = async () => {
+    if (!targetUserId || uploading) return;
+    const file = await chooseChatAttachment();
+    if (!file) return;
+    setSelectedAttachment(file);
+  };
+
+  const handleSendAttachment = async () => {
+    if (!targetUserId || !selectedAttachment || uploading) return;
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+      const response = await chatService.sendAttachment(targetUserId, selectedAttachment, (event) => {
+        if (event.total) setUploadProgress(Math.round((event.loaded / event.total) * 100));
+      });
+      if (response?.message) setMessages((prev) => [...prev, response.message]);
+      setSelectedAttachment(null);
+      Alert.alert('Sent', 'Attachment sent successfully.');
+    } catch (error) {
+      Alert.alert('Upload failed', error.message || 'Unable to send attachment.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const isCurrentUser = (msg) => {
     const senderId = msg.sender?._id || msg.sender;
     return senderId === user?._id;
+  };
+
+  const handleOpenAttachment = async (message) => {
+    try {
+      const url = await chatService.getAttachmentUrl(targetUserId, message._id);
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('Unable to open file', error.message || 'The attachment is unavailable.');
+    }
   };
 
   if (!targetUserId) {
@@ -252,7 +292,8 @@ export const ChatScreen = ({ route, navigation }) => {
           keyExtractor={(item) => item._id?.toString()}
           contentContainerStyle={styles.messageList}
           renderItem={({ item }) => (
-            <ChatBubble message={item} isCurrentUser={isCurrentUser(item)} />
+            <ChatBubble message={item}             isCurrentUser={isCurrentUser(item)}
+            onOpenAttachment={handleOpenAttachment} />
           )}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
         />
@@ -260,6 +301,24 @@ export const ChatScreen = ({ route, navigation }) => {
 
       {/* Input Bar */}
       <View style={[styles.inputBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+        {selectedAttachment && (
+          <View style={styles.selectedAttachment}>
+            <Text style={[styles.selectedName, { color: colors.textPrimary }]} numberOfLines={1}>
+              {selectedAttachment.name}
+            </Text>
+            <TouchableOpacity onPress={() => setSelectedAttachment(null)}>
+              <Text style={[styles.removeAttachment, { color: colors.error || '#d32f2f' }]}>Remove</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSendAttachment} disabled={uploading}>
+              <Text style={[styles.sendAttachment, { color: colors.primary }]}>
+                {uploading ? `${uploadProgress}%` : 'Send'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <TouchableOpacity style={styles.attachBtn} onPress={handlePickAttachment} disabled={uploading}>
+          <Text style={[styles.attachText, { color: colors.primary }]}>{uploading ? `${uploadProgress}%` : 'Attach'}</Text>
+        </TouchableOpacity>
         <TextInput
           style={[
             styles.textInput,
@@ -333,6 +392,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     gap: 8,
   },
+  attachBtn: { width: 42, height: 42, justifyContent: 'center', alignItems: 'center' },
+  attachText: { fontSize: 11, fontWeight: '800' },
+  selectedAttachment: {
+    position: 'absolute',
+    bottom: 68,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    elevation: 3,
+  },
+  selectedName: { flex: 1, fontSize: 12, fontWeight: '700' },
+  removeAttachment: { fontSize: 11, marginHorizontal: 8 },
+  sendAttachment: { fontSize: 12, fontWeight: '800' },
   textInput: {
     flex: 1,
     minHeight: 44,

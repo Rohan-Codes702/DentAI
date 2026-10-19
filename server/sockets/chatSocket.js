@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Message = require('../models/Message');
+const Appointment = require('../models/Appointment');
 const logger = require('../utils/logger');
 
 /**
@@ -39,6 +40,25 @@ const initChatSocket = (io) => {
       try {
         if (!receiverId || (!text && !attachment)) {
           return callback?.({ success: false, message: 'receiverId and text/attachment required' });
+        }
+        if (attachment) {
+          return callback?.({ success: false, message: 'Attachments must use the secure upload endpoint' });
+        }
+
+        const receiver = await User.findById(receiverId).select('role');
+        const isParticipant = receiver && ['patient', 'dentist'].includes(receiver.role) &&
+          await Appointment.exists({
+            patient: receiver.role === 'patient' ? receiverId : userId,
+            $or: [
+              { doctorId: receiver.role === 'dentist' ? receiverId : userId },
+              {
+                doctorId: { $exists: false },
+                dentist: receiver.role === 'dentist' ? receiverId : userId,
+              },
+            ],
+          });
+        if (!isParticipant) {
+          return callback?.({ success: false, message: 'You are not a participant in this conversation' });
         }
 
         const conversationId = Message.buildConversationId(userId, receiverId);

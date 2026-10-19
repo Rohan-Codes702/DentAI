@@ -25,7 +25,12 @@ const messageSchema = new mongoose.Schema(
     attachment: {
       url: String,
       publicId: String,
-      type: { type: String, enum: ['image', 'file'], default: 'image' },
+      type: { type: String, enum: ['image', 'file', 'pdf'], default: 'image' },
+      filename: String,
+      size: Number,
+      mimeType: String,
+      downloadUrl: String,
+      storageType: { type: String, enum: ['authenticated', 'public'] },
     },
     read: {
       type: Boolean,
