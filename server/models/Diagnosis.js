@@ -88,6 +88,11 @@ const diagnosisSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    emailSending: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

@@ -4,8 +4,8 @@ const https = require('https');
 const Diagnosis = require('../models/Diagnosis');
 const { generateDiagnosisPDF } = require('../utils/generatePDF');
 const { uploadRawToCloudinary } = require('../config/cloudinary');
-const { sendEmail, templates } = require('../utils/sendEmail');
 const logger = require('../utils/logger');
+const { sendVerifiedReportEmail } = require('../services/reportEmailService');
 
 // @desc    Generate (or regenerate) a professional PDF report
 // @route   POST /api/reports/:diagnosisId/generate
@@ -55,30 +55,7 @@ const generateReport = async (req, res, next) => {
 
     await diagnosis.save();
 
-    const patientPdfPath = await generateDiagnosisPDF(diagnosis);
-    const pdfBuffer = fs.readFileSync(patientPdfPath);
-
-    sendEmail({
-      to: diagnosis.patient.email,
-      subject: 'Your Dental Diagnosis Report is Ready - DentAI',
-      html: templates.diagnosisReady(diagnosis.patient.name),
-      attachments: [
-        {
-          filename: 'diagnosis-report.pdf',
-          content: pdfBuffer,
-          contentType: 'application/pdf',
-        },
-      ],
-    })
-      .then(async () => {
-        diagnosis.emailSent = true;
-        await diagnosis.save();
-      })
-      .catch((e) =>
-        logger.warn('Report email failed:', e.message)
-      );
-
-    fs.unlink(patientPdfPath, () => {});
+    await sendVerifiedReportEmail(diagnosis);
     fs.unlink(pdfPath, () => {});
 
     return res.status(200).json({

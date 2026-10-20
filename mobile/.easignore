@@ -24,3 +24,19 @@ android/app/.cxx/
 # Logs and test output
 *.log
 coverage/
+
+node_modules/
+.expo/
+.expo-check/
+dist/
+build/
+web-build/
+.git/
+.env
+coverage/
+*.log
+android/.gradle/
+android/build/
+android/app/build/
+android/.cxx/
+android/app/.cxx/

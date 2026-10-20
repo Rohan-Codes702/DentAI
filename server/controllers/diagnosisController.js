@@ -6,6 +6,7 @@ const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudina
 const { analyzeXray } = require('../utils/aiService');
 const logger = require('../utils/logger');
 const axios = require('axios');
+const { sendVerifiedReportEmail } = require('../services/reportEmailService');
 
 const normalizeDetection = (detection) => ({
   classId: detection.classId ?? detection.class_id,
@@ -346,6 +347,18 @@ const reviewDiagnosis = async (req, res, next) => {
     diagnosis.status = status || (confirmed ? 'confirmed' : 'pending_review');
 
     await diagnosis.save();
+
+    if (diagnosis.status === 'confirmed' && diagnosis.dentistReview.confirmed) {
+      await diagnosis.populate(
+        'patient',
+        'name email phone'
+      );
+      await diagnosis.populate(
+        'dentist',
+        'name email dentistProfile'
+      );
+      await sendVerifiedReportEmail(diagnosis);
+    }
 
     res.status(200).json({ success: true, diagnosis });
   } catch (error) {

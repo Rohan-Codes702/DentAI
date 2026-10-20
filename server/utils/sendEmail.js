@@ -82,9 +82,10 @@ const templates = {
 
   diagnosisReady: (name) => `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-      <h2 style="color:#1976d2;">Your Diagnosis Report is Ready</h2>
-      <p>Hi ${name}, your dentist has reviewed your X-ray analysis and confirmed
-      the diagnosis. You can now download your full report from the app.</p>
+      <h2 style="color:#1976d2;">Your DentAI Dental Report Is Ready</h2>
+      <p>Hi ${name}, your dentist has reviewed and verified your dental report.
+      Your verified PDF report is attached to this email.</p>
+      <p>Please contact your dentist if you have any questions about the report.</p>
     </div>`,
 
 };
